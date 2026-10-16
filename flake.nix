@@ -15,14 +15,28 @@
       # Ecc is only supported on Linux, so we only build for Linux.
       systems = [ "x86_64-linux" ];
 
-      perSystem = { pkgs, inputs', self', ... }: {
+      perSystem = { pkgs, inputs', self', ... }:
+      let
+        # Use latest yosys from nixpkgs-unstable, and wrap it to set the environment variables for ecc.
+        eccLatestYosys = inputs'.ecc.packages.default.overrideAttrs (_: {
+          postFixup = ''
+            for bin in ecc ecc-agent-rpc; do
+              wrapProgram "$out/bin/$bin" \
+                --set CHIPCOMPILER_OSS_CAD_DIR "${pkgs.yosys}" \
+                --set CHIPCOMPILER_KEPLER_FORMAL_ROOT "${inputs'.ecc.packages.keplerFormal}" \
+                --prefix PATH : "${pkgs.yosys}/bin"
+            done
+          '';
+        });
+      in
+      {
         devShells.default = pkgs.mkShell {
           packages = with pkgs; [
             nodejs_22
             pnpm
             yosys
             inputs'.ecos-studio.packages.default
-            inputs'.ecc.packages.default
+            eccLatestYosys
             inputs'.ecc-sizer.packages.default
           ];
 
@@ -39,7 +53,7 @@
         checks = {
           devShell = self'.devShells.default;
           ecos-studio = inputs'.ecos-studio.packages.default;
-          ecc = inputs'.ecc.packages.default;
+          ecc = eccLatestYosys;
           ecc-sizer = inputs'.ecc-sizer.packages.default;
         };
       };
