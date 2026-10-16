@@ -1,1 +1,12 @@
+# direnv
 .direnv/
+
+# nix build result
+result
+result-*
+
+# node / slidev
+node_modules/
+dist/
+.slidev/
+*.log
