@@ -51,11 +51,11 @@
         "nixpkgs": "nixpkgs_4"
       },
       "locked": {
-        "lastModified": 1792062169,
-        "narHash": "sha256-bvX26A/mSFABZxDu1hxxhEKw5hmYep7XLMUcjQ67Uxc=",
+        "lastModified": 1792140572,
+        "narHash": "sha256-yERHAWqQsG5ysrNnmSkkEr5zIkWKqxkdY6iYIa/DSyU=",
         "ref": "refs/heads/main",
-        "rev": "deb0d5794c6bb6bd12cb15d0de65165211ab4874",
-        "revCount": 288,
+        "rev": "05e19e75a7172c14df81a06e3375820c5a696cd2",
+        "revCount": 289,
         "submodules": true,
         "type": "git",
         "url": "https://github.com/openecos-projects/ecc-sizer.git"
