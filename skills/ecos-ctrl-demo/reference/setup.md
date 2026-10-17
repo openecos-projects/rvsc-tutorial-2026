@@ -5,13 +5,13 @@ around it silently.
 
 ## 1. Versions that work together
 
-| Component | Required | Known-good source (2026-10-17) |
-| --- | --- | --- |
-| ECOS Studio GUI | A build that has `--enable-ctrl` | ecos-studio branch `yell/refactor_gui_cli`, at or after `b9f2c885` (persistent control banner) |
-| ECC CLI | `ecc version --json` reports `"cli_contract": 1` | CI artifact `ecc-cli-linux-x86_64` of the ecc branch `emin/add-agent-ctrl` (run 38890117759) |
-| ecc-sizer, kepler-formal | Any recent build | `ecc-sizer/` and `kepler-formal/` from the ecos-installer nightly bundle `v0.1.0-nightly.20261015` |
-| ICS55 PDK | Assembled PDK directory | `pdk/` from the same nightly bundle |
-| yosys (with slang) | On `PATH` | nixpkgs `yosys`, or OSS CAD Suite |
+| Component                | Required                                         | Known-good source (2026-10-17)                                                                     |
+| ------------------------ | ------------------------------------------------ | -------------------------------------------------------------------------------------------------- |
+| ECOS Studio GUI          | A build that has `--enable-ctrl`                 | ecos-studio branch `yell/refactor_gui_cli`, at or after `b9f2c885` (persistent control banner)     |
+| ECC CLI                  | `ecc version --json` reports `"cli_contract": 1` | CI artifact `ecc-cli-linux-x86_64` of the ecc branch `emin/add-agent-ctrl` (run 38890117759)       |
+| ecc-sizer, kepler-formal | Any recent build                                 | `ecc-sizer/` and `kepler-formal/` from the ecos-installer nightly bundle `v0.1.0-nightly.20261015` |
+| ICS55 PDK                | Assembled PDK directory                          | `pdk/` from the same nightly bundle                                                                |
+| yosys (with slang)       | On `PATH`                                        | nixpkgs `yosys`, or OSS CAD Suite                                                                  |
 
 Things that do **not** work:
 
@@ -143,6 +143,28 @@ export ECOS_CTRL_INSTANCE=<instanceId>     # pin by id, not by label
 
   Minimal containers and headless servers without X libraries hit the same
   problem (known issue ECC-5).
+
+- `kepler-formal` (post-route LEC) needs `libcrypt.so.1` (known issue
+  ECC-9). Build a kepler root whose `bin/kepler-formal` adds it:
+
+  ```bash
+  K=/abs/nightly/kepler-formal
+  X=$(nix build --no-link --print-out-paths 'nixpkgs#libxcrypt-legacy.out')
+  mkdir -p /abs/kepler/bin
+  for f in "$K"/*; do [ "$(basename "$f")" = bin ] || ln -sfn "$f" /abs/kepler/; done
+  cat > /abs/kepler/bin/kepler-formal <<EOF
+  #!/usr/bin/env bash
+  export LD_LIBRARY_PATH=$X/lib:$K/lib\${LD_LIBRARY_PATH:+:\$LD_LIBRARY_PATH}
+  exec $K/bin/kepler-formal "\$@"
+  EOF
+  chmod +x /abs/kepler/bin/kepler-formal
+  export CHIPCOMPILER_KEPLER_FORMAL_ROOT=/abs/kepler
+  ```
+
+- The dev build also has a `--cli ecc` entry. It runs the same ECC as the
+  ctrl GUI, so workspaces it creates can be opened by that GUI (warning 14):
+  `electron /abs/ctrl-app --cli ecc run ...` with the same environment
+  variables as the GUI.
 
 ## 6. Final checklist
 

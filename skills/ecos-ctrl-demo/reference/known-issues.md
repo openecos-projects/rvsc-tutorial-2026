@@ -24,7 +24,7 @@ PDK, Sizer and kepler-formal `v0.1.0-nightly.20261015`.
   supply_dir, and `gcell.info` exists there). The `iEDA/` prefix is a leftover
   from the iEDA layout. Reached through
   `NonLinearPlace.one_descent_step -> placement_topology_iteration ->
-  l_shape_iteration.update_iteration -> prepare_l_shape_inputs_from_egr`.
+l_shape_iteration.update_iteration -> prepare_l_shape_inputs_from_egr`.
 - **Reproduced with:** minirv, workspace `minirv_fast` created with
   `place.diff_timing_driven_placement=0`, `place.differentiable_timing_obj=0`,
   `place.timing_opt_enabled=0`; crash after 9 min of placement.
@@ -67,7 +67,7 @@ PDK, Sizer and kepler-formal `v0.1.0-nightly.20261015`.
 ### ECC-5 The PyInstaller bundle needs `libxcb.so.1` and `libfontconfig.so.1` from the host
 
 - **Symptom:** `ecc doctor` reports `dreamplace: import failed -
-  libxcb.so.1: cannot open shared object file`, then
+libxcb.so.1: cannot open shared object file`, then
   `OSError: no library called "cairo-2" was found`.
 - **Evidence:** `dreamplace.Placer -> PlaceDrawer -> cairocffi` loads the
   bundled `libcairo`, which needs `_internal/libX11.so.6 -> libxcb.so.1` and
@@ -86,8 +86,78 @@ PDK, Sizer and kepler-formal `v0.1.0-nightly.20261015`.
 - **Status:** fixed locally as ecc commit `d178d12c`
   (`ci: run the experience CLI smoke with the managed Python`), branch
   `emin/add-agent-ctrl-smoke`; not pushed. The same CI run also failed `ruff
-  format` on two test files and two pytest cases
+format` on two test files and two pytest cases
   (`test_parameter_catalog_is_context_free_and_typed`, `test_ics55_gcd`).
+
+### ECC-7 `diff_sizing` fails on CPU with "insufficient CPU routing memory budget"
+
+- **Symptom:** on 2026-10-17, gcd with `floorplan.core_util=0.85`, started
+  from the GUI over `--ctrl`: placement finished in about 8 minutes (overflow
+  0.0999 at iteration 289), then `diff_sizing` failed after 4.5 minutes with
+  `RuntimeError: gpugr failed while routing design gcd: RuntimeError:
+insufficient CPU routing memory budget for shared state and one worker`.
+  `wait --operation` reported `interrupted`.
+- **Evidence:** `<workspace>/diff_sizing_dreamplace/log/diff_sizing.log`;
+  native log under `diff_sizing_dreamplace/data/diff_sizing/gr_parasitics/`.
+  The machine had 30 GB RAM, about 14 GB available. The alpha.9 AppImage's
+  `rtl2gds` flow has no `diff_sizing` step and passed the same design at 0.85.
+- **Not GUI-specific:** the same failure reproduces without the GUI, with the
+  dev build's `--cli ecc` (same ECC): `ecc run --workspace u0.85 --set
+floorplan.core_util=0.85` failed in `diff_sizing` after 3 min 14 s, rc=1.
+- **Guard arithmetic** (`gpugr/gr/CpuRouteResourceLimits.cpp` in the bundle):
+  budget = 80% of `MemAvailable` (or cgroup `memory.max - memory.current` if
+  lower). gcd needs reserved 4.56 GiB + 0.50 GiB per worker, so one worker
+  needs `MemAvailable` >= 6.32 GiB; the log showed 5.58 GiB. The routing grid
+  is large for gcd (`grid_graph_size=2071552`, 7 layers, 322 nets); not yet
+  checked whether that is expected.
+- **Likely why this machine is short** (not verified): the host uses ZFS; the
+  ARC held 11.9 GB, which Linux does not count in `MemAvailable` (30 GB total,
+  10.8 GB process RSS, 8.4 GB `MemAvailable`). No cgroup limit was set.
+- **Why so much for gcd:** the global-routing grid is fixed at
+  `GridGraph (7 x 512 x 512)` (`gpugr_native.log`), 2,071,552 cells, even for a
+  33 um die (about 64 nm per cell, below the metal pitch). The reserved memory
+  follows the grid, not the design. Not yet checked in the source whether the
+  grid is meant to scale with the die.
+- **Confirmed:** after a reboot (`MemAvailable` 22 GB) the guard passed with
+  8 workers (`clamp=none`) and `diff_sizing` finished in 6 min 38 s.
+- **Workaround:** make sure `MemAvailable` is at least about 7 GB before a
+  run (close large applications; on ZFS hosts the ARC can hold many GB that
+  Linux does not count as available).
+
+### ECC-8 ctrl-branch ECC: hold buffers overflow the core at `core_util=0.85`
+
+- **Symptom:** gcd, `floorplan.core_util=0.85`, `--cli ecc` of the ctrl-branch
+  dev build: `Timing optimization` fails with `utilization is larger than
+0.99`. The alpha.9 AppImage's ECC passes signoff at the same value.
+- **Evidence:** `timing_optimization_sizer/log/Timing optimization.log`: Sizer
+  inserts 35 hold buffers (`RSZ-0032`, area +11.9%), then
+  `DPL-0006 Core area: 846.72 um^2, Instances area: 924.56 um^2, Utilization:
+109.2%` and `DPL-0038`. The Python error is raised by the DreamPlace
+  legalization that the Sizer runner calls afterwards, not by xplace.
+- **Cause:** not located. The ctrl-branch flow adds `diff_sizing` before CTS;
+  whether it causes the hold violations is a guess.
+- **Workaround:** for this ECC, treat 0.85 as failing; the sweep must not
+  reuse alpha.9 numbers.
+
+### ECC-10 ctrl-branch ECC: `emir` needs a technology file the PDK does not ship
+
+- **Symptom:** gcd at `core_util` 0.4 and 0.75: every step through
+  `powerAnalysis` succeeds, then `emir` fails at once with
+  `EMIR technology_file_path is a placeholder; configure it in
+<workspace>/config/emir_ecc.json before running`. `Harden` does not run and
+  `signoff inspect` stays `blocked`.
+- **Evidence:** `ecc param show emir.technology_file_path`: default empty,
+  "required for analysis". No EMIR file found under the nightly PDK.
+- **Workaround:** none found; the CLI schema has no supported way to skip the
+  step (`ecc doc config` warns against editing `flow.skip_steps`). For a demo,
+  present the checklist and explain the blocked item.
+
+### ECC-9 NixOS: `kepler-formal` needs `libcrypt.so.1`
+
+- **Symptom:** `postRouteLec` fails at once:
+  `kepler-formal: error while loading shared libraries: libcrypt.so.1`.
+- **Workaround:** wrap it (setup.md section 5) and resume with
+  `ecc run --workspace <ws> --resume`; earlier steps are not re-run.
 
 ## ECOS Studio GUI
 

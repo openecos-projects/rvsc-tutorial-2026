@@ -54,7 +54,7 @@ audience sees real GUI interaction, with a pointer cue and on-screen captions.
    live until placement starts, then `load` a workspace that was finished
    beforehand and present that.
 9. **Cancel does not work.** The GUI cancel and `workspace.cancel` only
-   *request* a cancel; ECC keeps running placement. The only way to stop a run
+   _request_ a cancel; ECC keeps running placement. The only way to stop a run
    is to end the `ecc run` process (section 6). **Only stop runs you started
    yourself, and tell the user first.**
 10. Global options (`--pretty`, `--quiet`, `--instance`) go **before** the
@@ -64,6 +64,13 @@ audience sees real GUI interaction, with a pointer cue and on-screen captions.
     `{"index":1,"total":1,"status":"creating",...}` on stderr; those are not
     results.
 12. Use **absolute paths** everywhere (design dir, projects dir, PDK root).
+13. **`--projects-dir` must already exist.** Otherwise `create` fails with
+    `project_root_unwritable` (`ENOENT ... mkdir`). Run `mkdir -p` first.
+14. **The GUI and the workspaces must use the same ECC build.** A workspace
+    made by another ECC (for example the alpha.9 AppImage's `--cli ecc`, which
+    has no `cli_contract`) opens with a red toast
+    `ENGINEERING_SNAPSHOT_READ_FAILED: ... home/engineering-snapshot.json`.
+    Stop and report it; do not try to repair the workspace.
 
 ## 1. Check the environment (at the start of every session)
 
@@ -77,12 +84,12 @@ $SKILL/scripts/ctl list                  # expect: at least one instance
 $SKILL/scripts/ctl state                 # expect: one JSON line with "toolchain":{"status":"ready"}
 ```
 
-| What you see | Meaning | What to do |
-| --- | --- | --- |
-| `ctl list` prints `{"instances":[]}` or exits 3 | No GUI with `--enable-ctrl`, or the client runs in a different user environment (`XDG_RUNTIME_DIR`) | Follow setup.md. **Do not continue.** |
-| Several instances | More than one GUI has control enabled | `export ECOS_CTRL_INSTANCE=<instanceId>` (use the id, not the label) |
-| `toolchain.status` is not `ready` | ECC is not set up | Run the `ecc doctor --plain` check in setup.md and report what is missing |
-| `ctl state` takes > 10 s | Known slowdown after long sessions (GUI-6) | Check `ctl windows`; if it is fast, suggest restarting the GUI |
+| What you see                                    | Meaning                                                                                             | What to do                                                                |
+| ----------------------------------------------- | --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| `ctl list` prints `{"instances":[]}` or exits 3 | No GUI with `--enable-ctrl`, or the client runs in a different user environment (`XDG_RUNTIME_DIR`) | Follow setup.md. **Do not continue.**                                     |
+| Several instances                               | More than one GUI has control enabled                                                               | `export ECOS_CTRL_INSTANCE=<instanceId>` (use the id, not the label)      |
+| `toolchain.status` is not `ready`               | ECC is not set up                                                                                   | Run the `ecc doctor --plain` check in setup.md and report what is missing |
+| `ctl state` takes > 10 s                        | Known slowdown after long sessions (GUI-6)                                                          | Check `ctl windows`; if it is fast, suggest restarting the GUI            |
 
 ## 2. Prepare a design directory
 
@@ -117,17 +124,17 @@ node $SKILL/scripts/demo.mjs \
   --pace 1200
 ```
 
-| Option | Meaning |
-| --- | --- |
-| `--design DIR` | Directory containing `ecc.toml` (required) |
-| `--name WS` | Workspace name to create; must not exist yet (required) |
-| `--projects-dir DIR` | Create a **new** project at `DIR/<design.name>` |
-| `--project ROOT` | Add the workspace to an **existing** project (same top module only) |
-| `--pdk-root DIR` / `--pdk-id ID` | PDK directory, or an already-installed PDK id (exactly one) |
-| `--set KEY=VALUE` | Parameter override, repeatable (see `reference/params.md`) |
-| `--pace MS` | Pause before each UI action, with pointer cue (default 1200; 0-3000) |
-| `--no-run` | Stop after the workspace is open (rehearsals, or when the flow cannot finish) |
-| `--timeout-min N` | How long to wait for the flow (default and max 30). The flow keeps running after a timeout |
+| Option                           | Meaning                                                                                    |
+| -------------------------------- | ------------------------------------------------------------------------------------------ |
+| `--design DIR`                   | Directory containing `ecc.toml` (required)                                                 |
+| `--name WS`                      | Workspace name to create; must not exist yet (required)                                    |
+| `--projects-dir DIR`             | Create a **new** project at `DIR/<design.name>`                                            |
+| `--project ROOT`                 | Add the workspace to an **existing** project (same top module only)                        |
+| `--pdk-root DIR` / `--pdk-id ID` | PDK directory, or an already-installed PDK id (exactly one)                                |
+| `--set KEY=VALUE`                | Parameter override, repeatable (see `reference/params.md`)                                 |
+| `--pace MS`                      | Pause before each UI action, with pointer cue (default 1200; 0-3000)                       |
+| `--no-run`                       | Stop after the workspace is open (rehearsals, or when the flow cannot finish)              |
+| `--timeout-min N`                | How long to wait for the flow (default and max 30). The flow keeps running after a timeout |
 
 Exactly one of `--projects-dir` / `--project`, and exactly one of
 `--pdk-root` / `--pdk-id`, is required. Missing or conflicting options print
@@ -135,16 +142,16 @@ the usage and exit 2.
 
 How to read the output:
 
-| Output | Meaning | What to do |
-| --- | --- | --- |
-| `[create] <path>` | Workspace created | Continue |
-| `[open] /workspace/home` | Workspace is open in the GUI | Continue |
-| `[open] attempt 1 hit ...; retrying in 3s` | Known settling race (warning 5) | Nothing; the script retries |
-| `[run] flow started` | Run was clicked and the flow started | Wait; tell the user the flow is running |
-| `[wait] operation status: succeeded` and exit 0 | Every step finished | Take a screenshot, present results |
-| `[wait] TIMEOUT: ...` | Not finished within the limit | `ctl state` to see progress; report to the user |
-| `reported succeeded, but these steps did not finish` | GUI false success (warning 6) | Read `<workspace>/log/<operationId>.log` and report it |
-| `[stage] failed: {...}` | A stage failed | Look up `error.code` in `reference/ctl-reference.md` |
+| Output                                               | Meaning                              | What to do                                             |
+| ---------------------------------------------------- | ------------------------------------ | ------------------------------------------------------ |
+| `[create] <path>`                                    | Workspace created                    | Continue                                               |
+| `[open] /workspace/home`                             | Workspace is open in the GUI         | Continue                                               |
+| `[open] attempt 1 hit ...; retrying in 3s`           | Known settling race (warning 5)      | Nothing; the script retries                            |
+| `[run] flow started`                                 | Run was clicked and the flow started | Wait; tell the user the flow is running                |
+| `[wait] operation status: succeeded` and exit 0      | Every step finished                  | Take a screenshot, present results                     |
+| `[wait] TIMEOUT: ...`                                | Not finished within the limit        | `ctl state` to see progress; report to the user        |
+| `reported succeeded, but these steps did not finish` | GUI false success (warning 6)        | Read `<workspace>/log/<operationId>.log` and report it |
+| `[stage] failed: {...}`                              | A stage failed                       | Look up `error.code` in `reference/ctl-reference.md`   |
 
 ## 4. Step-by-step control (custom flows)
 
@@ -201,6 +208,64 @@ EOF
 A project-root input is also accepted, but its result lists no workspaces and
 no `openTarget`; you would have to find the button with `ctl controls`.
 Loading opens instantly and does not depend on placement finishing.
+
+## 5a. Run with `--cli`, then present in the GUI (recommended live demo)
+
+Run the flow headless with the **same build's** `--cli ecc` entry (warning
+14), then use `--ctrl` only to show the result. The flow takes minutes; the
+presentation takes seconds.
+
+```bash
+ECC="ecos-studio --cli ecc"                     # dev build: "electron /abs/ctrl-app --cli ecc"
+cd /abs/gcd                                     # project dir with ecc.toml
+$ECC run --workspace u0.75 --set floorplan.core_util=0.75 > run-u0.75.log 2>&1
+$ECC status --workspace u0.75 --plain           # read every step before presenting
+```
+
+- Start the run **before** the talk, or in the background, and present an
+  already finished workspace. Rehearsal numbers (ctrl-branch ECC, gcd, CPU):
+  one run took 11 to 36 minutes.
+- Do not `ctl load` a project while an `ecc run` in it is still going: the
+  load fails with `Live runtime process does not hold the Workspace lock`.
+- With the ctrl-branch ECC, signoff currently stays `blocked` at the `emir`
+  step (`EMIR technology_file_path is a placeholder`): the nightly PDK has no
+  EMIR technology file. Say so on screen; do not invent a path.
+
+The steps below then load the workspaces, walk the result with captions, open
+one, and show its signoff checklist. Get every number from
+`ecos-tutorial/scripts/sweep-table.sh` or `ecc report summary`; never invent
+them.
+
+````bash
+Rehearsed on 2026-10-17 (ctrl-branch dev build, gcd, `u0.75` made by
+`--cli`). Replace the caption text with numbers from your own run:
+
+```bash
+ctl load /abs/gcd/u0.75 /abs/gcd/u0.4          # workspace dirs; keep each openTarget
+ctl batch <<'EOF'
+{"method":"pace","params":{"delayMs":1500,"cues":true}}
+{"method":"caption","params":{"text":"Agent: open u0.75, made by ecc --cli","durationMs":0}}
+{"method":"click","params":{"target":<openTarget of u0.75, unchanged>}}
+{"method":"waitFor","params":{"route":"/workspace/home","timeoutMs":20000}}
+{"method":"caption","params":{"text":"Signoff checklist: what still blocks export","durationMs":0}}
+{"method":"waitFor","params":{"target":{"role":"button","name":"Sign-off details"},"state":"enabled","timeoutMs":20000}}
+{"method":"click","params":{"target":{"role":"button","name":"Sign-off details"}}}
+EOF
+ctl screenshot --out /abs/signoff.png
+````
+
+The batch ends with the last click, which closes the connection and clears
+the caption. To keep the last caption on screen for the screenshot, start the
+batch in the background, take the screenshot from a second call while it runs,
+and end the batch with a wait that is meant to time out:
+`{"method":"waitFor","params":{"route":"/nowhere","timeoutMs":6000}}`.
+
+- `pace` delays every request, so consecutive captions stay readable; keep
+  each caption under 80 characters.
+- Route still `/workspace/projects` after the click: warning 5, resend from
+  the `click` line.
+- Red **Failed to Open Project** toast: warning 14. Stop.
+- Close the dialog with `{"method":"press","params":{"key":"Escape"}}`.
 
 ## 6. Stop a run (only after the user agrees)
 

@@ -36,10 +36,10 @@ ECC changes.
 
 ## Design facts that worked
 
-| Design | top | clock_port | frequency_mhz | Notes |
-| --- | --- | --- | --- | --- |
-| zipdiv (ecc-ci-designs) | `zipdiv` | `i_clk` | 50 | `core_util = 0.40`, `cts.max_fanout = 6`; 1118 std cells, die 7208 um2, core util 40% |
-| minirv (Chisel, single file) | `minirv` | `clock` | 50 | Top module is the last module in the file; reset is `reset` |
+| Design                       | top      | clock_port | frequency_mhz | Notes                                                                                 |
+| ---------------------------- | -------- | ---------- | ------------- | ------------------------------------------------------------------------------------- |
+| zipdiv (ecc-ci-designs)      | `zipdiv` | `i_clk`    | 50            | `core_util = 0.40`, `cts.max_fanout = 6`; 1118 std cells, die 7208 um2, core util 40% |
+| minirv (Chisel, single file) | `minirv` | `clock`    | 50            | Top module is the last module in the file; reset is `reset`                           |
 
 Observed step times (minirv, CPU): synthesis 25 s, pre/post floorplan and
 macro placement about 1 s each, preplace 8 s. Creating a workspace takes

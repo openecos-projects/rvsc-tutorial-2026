@@ -1,10 +1,10 @@
 # Templates
 
-| File | Use |
-| --- | --- |
-| `designs.toml` | `ctl create --script designs.toml`: create several workspaces in one call. Edit every `/abs/...` path first |
-| `open-workspace.jsonl` | Open a workspace from the Projects page with a caption |
-| `run-flow.jsonl` | Click Run and wait up to 30 min, caption on screen the whole time |
+| File                   | Use                                                                                                         |
+| ---------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `designs.toml`         | `ctl create --script designs.toml`: create several workspaces in one call. Edit every `/abs/...` path first |
+| `open-workspace.jsonl` | Open a workspace from the Projects page with a caption                                                      |
+| `run-flow.jsonl`       | Click Run and wait up to 30 min, caption on screen the whole time                                           |
 
 Replace `@WORKSPACE@` before sending a JSONL file, then pipe it to `ctl batch`:
 
