@@ -41,23 +41,41 @@
           });
         in
         {
-          devShells.default = pkgs.mkShell {
-            packages = with pkgs; [
-              nodejs_22
-              pnpm
-              yosys
-              inputs'.ecos-studio.packages.default
-              eccLatestYosys
-              inputs'.ecc-sizer.packages.default
-            ];
+          devShells = {
+            default = pkgs.mkShell {
+              packages = with pkgs; [
+                nodejs_22
+                pnpm
+                appimage-run
+              ];
 
-            shellHook = ''
-              echo "🛝  Dev shell ready (node + pnpm)"
-              echo "    cd slides"
-              echo "    pnpm install   # 安装依赖"
-              echo "    pnpm dev       # 启动 Slidev 预览"
-              echo "    pnpm build     # 构建静态站点"
-            '';
+              # Prebuilt bundles (ECC CI/nightly PyInstaller bundle, nightly kepler-formal)
+              # expect these from the host; NixOS does not provide them on the default path.
+              # - libxcb, fontconfig: DreamPlace's cairo drawer (ecc doctor: libxcb.so.1 / cairo-2)
+              # - libxcrypt-legacy: kepler-formal (postRouteLec: libcrypt.so.1)
+              LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath [
+                pkgs.libxcb
+                pkgs.fontconfig.lib
+                pkgs.libxcrypt-legacy
+              ];
+
+              shellHook = ''
+                echo "🛝  Dev shell ready (node + pnpm)"
+                echo "    cd slides"
+                echo "    pnpm install"
+                echo "    pnpm dev"
+                echo "    pnpm build"
+              '';
+            };
+            ecos = pkgs.mkShell {
+              packages = with pkgs; [
+                yosys
+                inputs'.ecos-studio.packages.default
+                eccLatestYosys
+                inputs'.ecc-sizer.packages.default
+                # inputs'.kepler-formal.packages.default
+              ];
+            };
           };
 
           treefmt = {
