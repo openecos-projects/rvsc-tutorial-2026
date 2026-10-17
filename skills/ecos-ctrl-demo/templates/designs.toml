@@ -1,0 +1,18 @@
+# Batch create script: `ctl create --script designs.toml`
+# Relative paths resolve against this file's directory; `~` expands.
+# Every [[workspace]] has exactly one of `design` (a directory with ecc.toml)
+# or `draft` (a raw request JSON). Unknown keys are an error (exit 2).
+
+[defaults]
+projects_dir = "/abs/demo/runs"           # each design -> /abs/demo/runs/<design.name>
+pdk = { root = "/abs/nightly/pdk" }       # or { installation_id = "<id>" }
+focus = "minirv_base"                     # workspace to highlight afterwards
+
+[[workspace]]
+design = "/abs/demo/designs/minirv"
+name = "minirv_base"
+
+[[workspace]]
+design = "/abs/demo/designs/minirv"       # same design, parameter variant
+name = "minirv_util50"
+set = { "floorplan.core_util" = 0.5 }

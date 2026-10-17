@@ -1,0 +1,5 @@
+{"method":"pace","params":{"delayMs":1200,"cues":true}}
+{"method":"caption","params":{"text":"Run the full RTL-to-GDS flow","durationMs":0}}
+{"method":"waitFor","params":{"target":{"testId":"flow-run"},"state":"enabled","timeoutMs":30000}}
+{"method":"click","params":{"target":{"testId":"flow-run"}}}
+{"method":"waitFor","params":{"operation":true,"timeoutMs":1800000}}

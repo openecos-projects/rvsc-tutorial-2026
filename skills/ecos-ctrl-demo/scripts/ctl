@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# One `ecos-studio --ctrl` client call, with Chromium/Mesa launcher noise
+# filtered from stderr. Set ECOS_CTRL_CMD when the client is not on PATH as
+# `ecos-studio`, e.g. "/path/to/electron /path/to/app-dir" for a dev build.
+set -euo pipefail
+
+# shellcheck disable=SC2086 # ECOS_CTRL_CMD is a command line on purpose.
+exec ${ECOS_CTRL_CMD:-ecos-studio} --ctrl "$@" \
+  2> >(grep --line-buffered -vE '^(Fontconfig|MESA-LOADER)|ERROR:|^ERR:' >&2)

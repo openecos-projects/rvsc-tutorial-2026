@@ -1,0 +1,5 @@
+{"method":"pace","params":{"delayMs":1200,"cues":true}}
+{"method":"caption","params":{"text":"Open @WORKSPACE@","durationMs":0}}
+{"method":"waitFor","params":{"target":{"role":"button","name":"Open workspace @WORKSPACE@"},"state":"enabled","timeoutMs":30000}}
+{"method":"click","params":{"target":{"role":"button","name":"Open workspace @WORKSPACE@"}}}
+{"method":"waitFor","params":{"route":"/workspace/home","timeoutMs":20000}}
