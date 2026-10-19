@@ -61,7 +61,7 @@ transition: cover-exit
 </div>
 
 <div class="mt-4 text-sm opacity-60">
-  演讲者：XXX &nbsp;|&nbsp; 2026-XX-XX
+  演讲者：褚骐鸣 &nbsp;|&nbsp; 2026-10-19
 </div>
 
 <!--
@@ -633,7 +633,7 @@ PDK 修好后重跑：期望 signoff 变为 attention (只缺 macro_locations �
 hideInToc: true
 ---
 
-# 签核包交给谁：拼片流片模板
+# 签核包交付：拼片流片模板
 
 签核包导出后，提交到 [开芯工厂](https://factory.openecos.com/templates) 选一个模板投片。三个模板，其实只有**两种模式**:
 
@@ -651,7 +651,7 @@ hideInToc: true
 
 <div>
 
-- **MPW** (Multi-Project Wafer):多个项目拼在同一片晶圆上，但每个设计是**独立的裸片**,自己负责焊盘和封装
+- **MPW** (Multi-Project Wafer):多个项目拼在同一片晶圆上，但每个设计是**独立的裸片**，可以自己封装
 - **MPC** (Multi-Project Chip):多个设计拼进**同一颗芯片**,共用已验证的 pad ring、IO wrapper、封装和板卡 —— Frame 和 OSOC 都是这种
 - 所以 Frame / OSOC 只交 **DEF + 网表**,不用自己做焊盘;这正是 ECC 布线后输出的东西
 
@@ -681,7 +681,7 @@ MPC 共享裸片：116 个焊盘、96 个封装引脚、每边 29 个焊盘;Fram
 hideInToc: true
 ---
 
-# 按面积收费：每平方毫米都是钱
+# 流片按面积收费
 
 <div class="text-sm">
 
@@ -700,7 +700,7 @@ hideInToc: true
 
 <div v-click class="mt-4">
 
-注意每一行：**物理设计面积 ≈ 综合面积 ÷ 0.6**。多出来的 40%,就是下一页要讲的东西。
+注意每一行：**物理设计面积 ≈ 综合面积 ÷ 0.6**。多出来的 40%
 
 </div>
 
@@ -910,9 +910,9 @@ ecc signoff inspect --workspace u0.75
 
 ---
 
-# 第二部分：在 GUI 里看结果、做决策
+# 第二部分：在 GUI 里看结果、辅助开发者进行决策
 
-CLI 擅长**批量跑**,GUI 擅长**看和比**。两者操作的是同一个项目目录：
+CLI 适合**批量跑 Flow**,GUI 适合**用来查看具体报错信息**。两者操作的是同一个项目目录：
 
 <div grid="~ cols-2 gap-6">
 
