@@ -1,12 +1,37 @@
 # direnv
 .direnv/
+.envrc.local
 
-# nix build result
+# nix build results
 result
 result-*
 
-# node / slidev
+# node / pnpm
 node_modules/
+.pnpm-store/
+pnpm-debug.log*
+
+# slidev / vite build output and exports
 dist/
 .slidev/
+.vite/
+slides-export.*
+
+# local ECOS nightly toolchain (tools/install-ecos-nightly.sh)
+ecos-nightly/
+ecos-nightly-*.tar.gz
+*.AppImage
+
+# logs
 *.log
+
+# local environment / secrets
+.env
+.env.*
+!.env.example
+
+# editor / OS cruft
+.DS_Store
+Thumbs.db
+*.swp
+*~
