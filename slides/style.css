@@ -1,0 +1,354 @@
+/**
+ * Rosé Pine Dawn theme for Slidev
+ * Palette: https://rosepinetheme.com/palette
+ * Light = Rosé Pine Dawn, Dark = Rosé Pine
+ */
+
+/* Fonts (all SIL OFL, free for commercial use)
+ * - Gelasio: Georgia-metric-compatible serif for Latin text
+ * - Noto Sans SC Variable (思源黑体): Hei-style CJK, variable weight 100-900
+ * - Maple Mono: code (rounded, cursive italics)
+ */
+@import "@fontsource/gelasio/400.css";
+@import "@fontsource/gelasio/600.css";
+@import "@fontsource/gelasio/700.css";
+@import "@fontsource-variable/noto-sans-sc/index.css";
+@import "@fontsource/maple-mono/400.css";
+@import "@fontsource/maple-mono/400-italic.css";
+@import "@fontsource/maple-mono/700.css";
+
+:root {
+  /* Dawn palette */
+  --rp-base: #faf4ed;
+  --rp-surface: #fffaf3;
+  --rp-overlay: #f2e9e1;
+  --rp-muted: #9893a5;
+  --rp-subtle: #797593;
+  --rp-text: #575279;
+  --rp-love: #b4637a;
+  --rp-gold: #ea9d34;
+  --rp-rose: #d7827e;
+  --rp-pine: #286983;
+  --rp-foam: #56949f;
+  --rp-iris: #907aa9;
+  --rp-hl-low: #f4ede8;
+  --rp-hl-med: #dfdad9;
+  --rp-hl-high: #cecacd;
+
+  /* ECOS brand orange (matches the logo / official badge) */
+  --ecos-orange: #ef6c00;
+
+  --slidev-theme-primary: var(--rp-pine);
+}
+
+html.dark {
+  /* Rosé Pine (main) palette */
+  --rp-base: #191724;
+  --rp-surface: #1f1d2e;
+  --rp-overlay: #26233a;
+  --rp-muted: #6e6a86;
+  --rp-subtle: #908caa;
+  --rp-text: #e0def4;
+  --rp-love: #eb6f92;
+  --rp-gold: #f6c177;
+  --rp-rose: #ebbcba;
+  --rp-pine: #31748f;
+  --rp-foam: #9ccfd8;
+  --rp-iris: #c4a7e7;
+  --rp-hl-low: #21202e;
+  --rp-hl-med: #403d52;
+  --rp-hl-high: #524f67;
+
+  --slidev-theme-primary: var(--rp-foam);
+}
+
+/* ---------- Base ---------- */
+
+.slidev-layout {
+  font-family:
+    "Gelasio", "Noto Sans SC Variable", "Noto Sans SC", ui-sans-serif,
+    system-ui, sans-serif;
+  background-color: var(--rp-base);
+  color: var(--rp-text);
+}
+
+.slidev-layout pre,
+.slidev-layout code,
+.slidev-layout .shiki {
+  font-family: "Maple Mono", "Noto Sans SC Variable", monospace;
+}
+
+.slidev-layout .mermaid {
+  font-family: "Gelasio", "Noto Sans SC Variable", sans-serif;
+}
+
+.slidev-layout h1,
+.slidev-layout h2,
+.slidev-layout h3,
+.slidev-layout h4 {
+  color: var(--rp-rose);
+  font-weight: 600;
+}
+
+.slidev-layout a {
+  color: var(--rp-iris);
+}
+
+.slidev-layout li {
+  color: var(--rp-subtle);
+}
+
+.slidev-layout strong {
+  color: var(--rp-text);
+  font-weight: 800;
+}
+
+.slidev-layout code {
+  color: var(--rp-text);
+  background-color: var(--rp-hl-med);
+  border-radius: 0.25rem;
+  padding: 0.1rem 0.3rem;
+}
+
+html.dark .slidev-layout code {
+  background-color: var(--rp-overlay);
+}
+
+.slidev-layout pre code {
+  /* let shiki theme drive colors inside code blocks */
+  color: unset;
+  background-color: unset;
+  padding: unset;
+}
+
+.slidev-layout blockquote {
+  border-left: 3px solid var(--rp-pine);
+  background-color: var(--rp-surface);
+  border-radius: 0 0.5rem 0.5rem 0;
+  padding: 0.5rem 1rem;
+  color: var(--rp-subtle);
+}
+
+.slidev-layout table {
+  border-color: var(--rp-hl-med);
+}
+
+.slidev-layout th {
+  background-color: var(--rp-overlay);
+  color: var(--rp-pine);
+}
+
+.slidev-layout td,
+.slidev-layout th {
+  border-color: var(--rp-hl-med) !important;
+}
+
+.slidev-layout hr {
+  border-color: var(--rp-hl-med);
+}
+
+/* ---------- Cover ---------- */
+
+.slidev-layout.cover .cover-title {
+  display: block;
+  width: min(640px, 80%);
+  height: auto;
+  margin: 0 auto;
+  overflow: visible;
+}
+
+.slidev-layout.cover .cover-title text {
+  font-family: "Gelasio", "Noto Sans SC Variable", sans-serif;
+  font-size: 48px;
+  font-weight: 700;
+}
+
+/* 底层:实心橙 + 淡橙描边 */
+.slidev-layout.cover .cover-title-base {
+  fill: var(--ecos-orange);
+  stroke: rgba(239, 108, 0, 0.28);
+  stroke-width: 1;
+}
+
+/* 上层:单束流光,依次掠过各字母轮廓(由光束遮罩控制显形) */
+.slidev-layout.cover .cover-title-flow {
+  fill: none;
+  stroke: #fff1de;
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+/* 辉光层:更粗的暖色描边 + 模糊,形成光束的光晕 */
+.slidev-layout.cover .cover-title-glow {
+  fill: none;
+  stroke: #ffb35c;
+  stroke-width: 5;
+  opacity: 0.85;
+  filter: blur(4px);
+}
+
+/* 光束从左到右移动:6s 一个周期,60% 时间扫过,40% 停顿 */
+.slidev-layout.cover .cover-title-beam {
+  animation: cover-beam-move 6s linear infinite;
+}
+
+@keyframes cover-beam-move {
+  0% {
+    transform: translateX(0);
+  }
+  60% {
+    transform: translateX(760px);
+  }
+  100% {
+    transform: translateX(760px);
+  }
+}
+
+/* Cover entrance animation: blank -> staggered silky fade-in */
+@keyframes cover-enter {
+  from {
+    opacity: 0;
+    transform: translateY(28px);
+    filter: blur(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+}
+
+.slidev-layout.cover .my-auto > * {
+  /* backwards: 延迟期间保持 from 状态(空白),结束后交还样式控制权给 hover */
+  animation: cover-enter 0.9s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  transition:
+    transform 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+    filter 0.35s ease;
+}
+
+.slidev-layout.cover .my-auto > *:nth-child(1) {
+  animation-delay: 0.15s;
+}
+.slidev-layout.cover .my-auto > *:nth-child(2) {
+  animation-delay: 0.35s;
+}
+.slidev-layout.cover .my-auto > *:nth-child(3) {
+  animation-delay: 0.55s;
+}
+.slidev-layout.cover .my-auto > *:nth-child(4) {
+  animation-delay: 0.75s;
+}
+.slidev-layout.cover .my-auto > *:nth-child(5) {
+  animation-delay: 0.95s;
+}
+.slidev-layout.cover .my-auto > *:nth-child(6) {
+  animation-delay: 1.1s;
+}
+
+@media (prefers-reduced-motion: reduce), print {
+  .slidev-layout.cover .my-auto > * {
+    animation: none;
+  }
+  .slidev-layout.cover .cover-title-light {
+    display: none;
+  }
+}
+
+/* ---------- Cover exit transition ---------- */
+
+/* 封面离场:0.85s 加速离场,上浮更远、缩得更小、模糊更强 */
+.cover-exit-leave-active {
+  transition: all 0.85s cubic-bezier(0.55, 0, 0.55, 0.2);
+}
+
+/* 下一页(目录)入场:延迟 0.2s,让封面先走完再丝滑升起 */
+.cover-exit-enter-active {
+  transition: all 0.75s cubic-bezier(0.22, 1, 0.36, 1) 0.2s;
+}
+
+.cover-exit-leave-to {
+  opacity: 0;
+  translate: 0 -12%;
+  scale: 0.94;
+  filter: blur(16px);
+}
+
+.cover-exit-enter-from {
+  opacity: 0;
+  translate: 0 6%;
+}
+
+/* ---------- Cover hover interactions ---------- */
+
+.slidev-layout.cover .cover-title:hover {
+  transform: translateY(-3px);
+  filter: drop-shadow(0 6px 18px rgba(239, 108, 0, 0.28));
+}
+
+.slidev-layout.cover h2,
+.slidev-layout.cover h3 {
+  color: var(--rp-subtle);
+  font-weight: 400;
+}
+
+/* ---------- Callouts ---------- */
+
+.callout {
+  border-radius: 0.5rem;
+  padding: 0.75rem 1rem;
+  background-color: var(--rp-overlay);
+  color: var(--rp-text);
+}
+
+.callout-info {
+  background-color: color-mix(in srgb, var(--rp-foam) 15%, var(--rp-base));
+  border-left: 3px solid var(--rp-foam);
+}
+
+.callout-warn {
+  background-color: color-mix(in srgb, var(--rp-gold) 15%, var(--rp-base));
+  border-left: 3px solid var(--rp-gold);
+}
+
+/* 目录里被涂黑的章节 (见 components/SecretGate.vue)。
+ * frontmatter 的 title 只写到 "第三部分：",后面接一块实心色条。
+ * 链接目标随章节位置变化：若前面增删了页面，需同步修改 href。 */
+.slidev-toc-item a[href$="/22"] p::after {
+  content: "";
+  display: inline-block;
+  width: 11em;
+  height: 1em;
+  margin-left: 0.15em;
+  vertical-align: -0.15em;
+  background-color: var(--rp-text);
+  border-radius: 0.1em;
+}
+
+/* 紧凑代码块: 真实终端输出较长时使用 */
+.code-sm pre,
+.code-sm .shiki {
+  font-size: 0.68em !important;
+  line-height: 1.35 !important;
+}
+
+/* ---------- Code blocks ---------- */
+
+.slidev-layout pre {
+  border: 1px solid var(--rp-hl-high);
+  border-radius: 0.5rem;
+}
+
+/* ---------- Mermaid ---------- */
+
+.slidev-layout .mermaid {
+  background-color: var(--rp-surface);
+  border-radius: 0.75rem;
+  padding: 0.5rem 1rem;
+}
+
+/* ---------- Page number / nav ---------- */
+
+.slidev-page-num,
+.slidev-nav-controls {
+  color: var(--rp-muted);
+}

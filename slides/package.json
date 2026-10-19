@@ -1,0 +1,22 @@
+{
+  "name": "ecos-studio-rvsc2026-slides",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "slidev --open",
+    "present": "slidev --remote",
+    "build": "slidev build --without-notes",
+    "export": "slidev export"
+  },
+  "dependencies": {
+    "@fontsource-variable/noto-sans-sc": "^5.3.1",
+    "@fontsource/gelasio": "^5.3.0",
+    "@fontsource/maple-mono": "^5.3.0",
+    "@slidev/cli": "^52.1.0",
+    "@slidev/theme-default": "latest",
+    "vue": "^3.5.13"
+  },
+  "devDependencies": {
+    "@slidev/types": "^53.0.0"
+  }
+}
