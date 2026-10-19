@@ -441,7 +441,8 @@ hideInToc: true
 ```bash
 mkdir ~/ecc-demo && cd ~/ecc-demo
 ecc init gcd && cd gcd
-cp /path/to/ecc/docs/examples/gcd/gcd.v rtl/
+# 没有自己的 RTL？用仓库里的 gcd 示例
+cp /path/to/rvsc-tutorial-2026/examples/gcd/rtl/gcd.v rtl/
 ```
 
 <div class="code-sm">
@@ -494,6 +495,7 @@ ecc doctor   # 环境体检
 </div>
 
 <!--
+gcd.v 来自仓库 examples/gcd/rtl/gcd.v(ECC docs/examples/gcd/gcd.v,Apache-2.0);没有自己的 RTL 的学员直接拷贝这一份
 本分支的 ecc check 要求先有 workspace:新项目上直接跑会报 workspace_required (declared workspaces: none)
 所以第一次运行前用 pdk set-root + doctor 做体检;跑过一次后 ecc check --workspace <ws> 才可用
 PDK 不完整 (没 make unzip) 时，pdk set-root 会直接报 tech LEF / LEF / liberty 缺失
