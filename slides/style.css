@@ -310,20 +310,6 @@ html.dark .slidev-layout code {
   border-left: 3px solid var(--rp-gold);
 }
 
-/* 目录里被涂黑的章节 (见 components/SecretGate.vue)。
- * frontmatter 的 title 只写到 "第三部分：",后面接一块实心色条。
- * 链接目标随章节位置变化：若前面增删了页面，需同步修改 href。 */
-.slidev-toc-item a[href$="/22"] p::after {
-  content: "";
-  display: inline-block;
-  width: 11em;
-  height: 1em;
-  margin-left: 0.15em;
-  vertical-align: -0.15em;
-  background-color: var(--rp-text);
-  border-radius: 0.1em;
-}
-
 /* 紧凑代码块: 真实终端输出较长时使用 */
 .code-sm pre,
 .code-sm .shiki {

@@ -1050,10 +1050,6 @@ hideInToc: true
 -->
 
 ---
-title: 第三部分：
----
-
-<SecretGate>
 
 # 第三部分：让 Agent 来调参
 
@@ -1078,8 +1074,6 @@ flowchart LR
 - 每轮半小时以上：现场跑不完，要提前跑，并行、早停、先粗后细
 - 人负责定目标、给预算、划边界，最后在 GUI 里复核
 
-</SecretGate>
-
 <!--
 Agent 只是另一个 ECC 前端，和 GUI 平级
 关键：Agent 产生的每个 workspace 都留在磁盘上，人可以在 GUI 里逐个复核
@@ -1088,8 +1082,6 @@ Agent 只是另一个 ECC 前端，和 GUI 平级
 ---
 hideInToc: true
 ---
-
-<SecretGate>
 
 # 一句话交给 Agent
 
@@ -1139,8 +1131,6 @@ u0.85     failed timing_opt     1095.52 um² 85 % 100 MHz
 
 </div>
 
-</SecretGate>
-
 <!--
 skill 是给 agent 的“讲义”:讲义告诉学生怎么做，skill 告诉 agent 怎么做
 prompt 只说目标，方法沉淀在 skill 里 —— 这就是后面要讲的“降低重建上下文的成本”
@@ -1149,8 +1139,6 @@ prompt 只说目标，方法沉淀在 skill 里 —— 这就是后面要讲的�
 ---
 hideInToc: true
 ---
-
-<SecretGate>
 
 # Agent 跑出来的结果
 
@@ -1187,8 +1175,6 @@ flowchart TB
 
 > 当前能下的结论：最大可签核利用率在 **0.40 ~ 0.75** 之间 —— 每一轮都要半小时，第二轮请提前跑好
 
-</SecretGate>
-
 <!--
 数据来自 2026-10-17 实测:ECC emin/add-agent-ctrl (d5b04c3c),gcd,8 核 CPU
 0.4 / 0.75 都卡在 emir(缺 PDK 的 EMIR 工艺文件),所以严格说两者都还没"可签核";PDK 修好后重跑这页
@@ -1200,8 +1186,6 @@ flowchart TB
 ---
 hideInToc: true
 ---
-
-<SecretGate>
 
 # 演示:CLI 跑完，再让 Agent 在 GUI 里展示
 
@@ -1231,8 +1215,6 @@ Install the ecos-ctrl-demo Agent Skill from openecos-projects/rvsc-tutorial-2026
 run the gcd flow with --cli, then open the workspace in the running ECOS Studio and show its signoff.
 ```
 
-</SecretGate>
-
 <!--
 现场顺序：
 1. 演讲前用开发分支的 --cli 把 workspace 跑完 (现场机器上一轮 > 30 min，不要现场跑)
@@ -1243,8 +1225,6 @@ run the gcd flow with --cli, then open the workspace in the running ECOS Studio 
 ---
 hideInToc: true
 ---
-
-<SecretGate>
 
 # 演示截图:Agent 打开了 CLI 跑出的 workspace
 
@@ -1281,8 +1261,6 @@ click **Sign-off details**:每一项都有证据链接
 > 顶部是"Controlled by an external client"提示条;STA 13 个 corner、RCX 9 个 SPEF 都来自 CLI 那次运行
 
 </div>
-
-</SecretGate>
 
 <!--
 截图来自 2026-10-17 彩排：开发分支 ECC (--cli),gcd core_util=0.75
