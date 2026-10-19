@@ -92,7 +92,7 @@ hideInToc: true
 
 <div>
 
-### 在“一生一芯”里：
+### 在[“一生一芯”](https://ysyx.oscc.cc/)里：
 
 - 用 Logisim 搭过数字逻辑电路 (F 阶段)
 - 学过硬件描述语言 Verilog(E1)
@@ -307,10 +307,10 @@ flowchart LR
 
 <div>
 
-- **ECC** (ECOS Chip Compiler) — 开源 RTL-to-GDS **编译器**,有 CLI 与 Python API
-- **ECOS Studio** — 桌面 GUI,ECC 的一个**前端**:可视化、对比、导出
-- **ICsprout55** — 开源 55nm PDK，无需 NDA
-- **retroSoC** — 可组合的 RISC-V SoC IP
+- **[ECC](https://github.com/openecos-projects/ecc)** (ECOS Chip Compiler) — 开源 RTL-to-GDS **编译器**,有 CLI 与 Python API
+- **[ECOS Studio](https://github.com/openecos-projects/ecos-studio)** — 桌面 GUI,ECC 的一个**前端**:可视化、对比、导出
+- **[ICsprout55](https://github.com/openecos-projects/icsprout55-pdk)** — 开源 55nm PDK，无需 NDA
+- **[retroSoC](https://github.com/retroSoC/retroSoC)** — 可组合的 RISC-V SoC IP
 
 <div class="mt-6">
 
@@ -379,7 +379,7 @@ hideInToc: true
 
 # 安装：一个 nightly 包装齐整条工具链
 
-`ecos-nightly-linux-x86_64.tar.gz` 里有 ECC、Sizer、kepler-formal、ICsprout55 PDK 和 ECOS Studio:
+[`ecos-nightly-linux-x86_64.tar.gz`](https://github.com/openecos-projects/ecos-installer/releases/tag/v0.1.0-nightly.20261013) 里有 ECC、Sizer、kepler-formal、ICsprout55 PDK 和 ECOS Studio:
 
 <div grid="~ cols-[3fr_2fr] gap-6">
 
@@ -395,7 +395,7 @@ ecc doctor          # 环境体检：yosys / sizer / kepler-formal
 ```
 
 - `ecos-env.sh` 把 `ecc`、Sizer、kepler-formal 放进 PATH，并指好 PDK
-- 包里不含 yosys，安装脚本会顺带下载 OSS CAD Suite
+- 包里不含 yosys,[安装脚本](https://github.com/openecos-projects/rvsc-tutorial-2026/blob/main/tools/install-ecos-nightly.sh)会顺带下载 [OSS CAD Suite](https://github.com/YosysHQ/oss-cad-suite-build)
 - 同一个 ECC 也给 ECOS Studio 用：`ecos-env.sh` 不带参数直接启动 Studio
 
 </div>
@@ -550,7 +550,7 @@ filler         0:0:0
 
 <div class="mt-4">
 
-> 讲义 E8 在 GUI 里从 Floorplan 开始、导入综合后的网表;CLI 这里直接从 RTL 开始，综合也交给 ECC
+> [讲义 E8](https://ysyx.oscc.cc/docs/2607/e/8.html#用ecos-studio进行后端物理设计) 在 GUI 里从 Floorplan 开始、导入综合后的网表;CLI 这里直接从 RTL 开始，综合也交给 ECC
 
 </div>
 
@@ -881,7 +881,7 @@ ecc signoff inspect --workspace u0.75
 
 <div>
 
-### 讲义里的决策规则
+### [讲义](https://ysyx.oscc.cc/docs/2607/e/8.html#用ecos-studio进行后端物理设计)里的决策规则
 
 <div class="text-sm">
 
@@ -1061,7 +1061,7 @@ hideInToc: true
 
 # 第三部分：让 Agent 来调参
 
-把“读报告 → 归因 → 选参数 → 重跑”交给 coding agent (Claude Code / Codex / OpenCode …):
+把“读报告 → 归因 → 选参数 → 重跑”交给 coding agent ([Claude Code](https://www.claude.com/product/claude-code) / [Codex](https://github.com/openai/codex) / [OpenCode](https://opencode.ai) …):
 
 ```mermaid {scale: 0.62}
 flowchart LR
@@ -1104,7 +1104,7 @@ and use it to explore the highest util by following best practices.
 
 ### prompt 很短，是因为知识在 skill 里
 
-`skills/ecos-tutorial/SKILL.md` 写的是我们踩过的坑：
+[`skills/ecos-tutorial/SKILL.md`](https://github.com/openecos-projects/rvsc-tutorial-2026/blob/main/skills/ecos-tutorial/SKILL.md) 写的是我们踩过的坑：
 
 - 一个值 = 一个新 workspace;不 `--overwrite`、不删除
 - 先测 baseline 时长和可用内存，再决定并行几个
@@ -1115,7 +1115,7 @@ and use it to explore the highest util by following best practices.
 
 <div>
 
-### 附带一个小工具
+### 附带一个[小工具](https://github.com/openecos-projects/rvsc-tutorial-2026/blob/main/skills/ecos-tutorial/scripts/sweep-table.sh)
 
 ```bash
 scripts/sweep-table.sh ~/ecc-demo/gcd \
@@ -1577,20 +1577,22 @@ hideInToc: true
 
 # 社区与资源
 
-<div grid="~ cols-2 gap-8">
+<div grid="~ cols-[3fr_2fr] gap-6">
 
 <div>
 
 ### 开源仓库
 
-- **ECOS Studio** — github.com/openecos-projects/ecos-studio
-- **ECC** — github.com/openecos-projects/ecc
-- **retroSoC** — github.com/retroSoC
-- **PDK** — github.com/openecos-projects/icsprout55-pdk
+- **ECOS Studio** — [github.com/openecos-projects/ecos-studio](https://github.com/openecos-projects/ecos-studio)
+- **ECC** — [github.com/openecos-projects/ecc](https://github.com/openecos-projects/ecc)
+- **retroSoC** — [github.com/retroSoC](https://github.com/retroSoC)
+- **PDK** — [github.com/openecos-projects/icsprout55-pdk](https://github.com/openecos-projects/icsprout55-pdk)
+- **本教程** — [github.com/openecos-projects/rvsc-tutorial-2026](https://github.com/openecos-projects/rvsc-tutorial-2026)
 
 ### 文档
 
-- ysyx 讲义 E8:后端物理设计和流片准备
+- [ysyx 讲义 E8:后端物理设计和流片准备](https://ysyx.oscc.cc/docs/2607/e/8.html)
+- [ysyx 讲义 D6:从 RTL 代码到可流片版图](https://ysyx.oscc.cc/docs/2607/d/6.html)
 - `ecc doc tutorial --lang cn` (CLI 自带教程)
 - `ecc doc ug --lang cn` (用户指南)
 
@@ -1601,12 +1603,12 @@ hideInToc: true
 ### 反馈
 
 - ECC 和 ECOS Studio 在 2026 下半年会**频繁迭代**
-- 遇到 Bug 或有建议：GitHub Issues
+- 遇到 Bug 或有建议：GitHub Issues ([ECC](https://github.com/openecos-projects/ecc/issues) / [ECOS Studio](https://github.com/openecos-projects/ecos-studio/issues))
 - WeChat 社区 (见 README 二维码)
 
 <div class="mt-8 p-4 callout text-center">
 
-**扫码 / 搜索 openecos-projects 关注我们**
+**扫码 / 搜索 [openecos-projects](https://github.com/openecos-projects) 关注我们**
 
 </div>
 
@@ -1630,4 +1632,8 @@ hideInToc: true
 
 <div class="mt-12 opacity-60">
   RVSC 2026 · RISC-V Summit China
+</div>
+
+<div class="mt-4 text-sm opacity-60">
+  讲义与 Agent Skill:<a href="https://github.com/openecos-projects/rvsc-tutorial-2026">github.com/openecos-projects/rvsc-tutorial-2026</a>
 </div>
