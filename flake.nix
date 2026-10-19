@@ -29,6 +29,11 @@
         }:
         let
           # Use latest yosys from nixpkgs-unstable, and wrap it to set the environment variables for ecc.
+          hostLibs = pkgs.lib.makeLibraryPath [
+            pkgs.libxcb
+            pkgs.fontconfig.lib
+            pkgs.libxcrypt-legacy
+          ];
           eccLatestYosys = inputs'.ecc.packages.default.overrideAttrs (_: {
             postFixup = ''
               for bin in ecc ecc-agent-rpc; do
@@ -47,19 +52,21 @@
                 nodejs_22
                 pnpm
                 appimage-run
+                yosys # the nightly bundle ships no OSS CAD Suite; ECC's doctor needs yosys + slang
               ];
 
-              # Prebuilt bundles (ECC CI/nightly PyInstaller bundle, nightly kepler-formal)
+              # Prebuilt bundles (ECC nightly PyInstaller bundle, nightly kepler-formal)
               # expect these from the host; NixOS does not provide them on the default path.
-              # - libxcb, fontconfig: DreamPlace's cairo drawer (ecc doctor: libxcb.so.1 / cairo-2)
+              # - libxcb, fontconfig: DreamPlace's cairo drawer (placement: libxcb.so.1 / cairo-2)
               # - libxcrypt-legacy: kepler-formal (postRouteLec: libcrypt.so.1)
-              LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath [
-                pkgs.libxcb
-                pkgs.fontconfig.lib
-                pkgs.libxcrypt-legacy
-              ];
+              LD_LIBRARY_PATH = hostLibs;
 
+              # ECC strips LD_LIBRARY_PATH before launching kepler-formal, so the
+              # variable above never reaches it. nix-ld reads NIX_LD_LIBRARY_PATH,
+              # which ECC leaves alone; prepend the same libraries there too.
               shellHook = ''
+                export NIX_LD_LIBRARY_PATH="${hostLibs}''${NIX_LD_LIBRARY_PATH:+:$NIX_LD_LIBRARY_PATH}"
+                export CHIPCOMPILER_OSS_CAD_DIR="${pkgs.yosys}"
                 echo "🛝  Dev shell ready (node + pnpm)"
                 echo "    cd slides"
                 echo "    pnpm install"
