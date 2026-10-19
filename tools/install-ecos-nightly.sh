@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Install the ECOS nightly toolchain used in the RVSC 2026 tutorial.
 #
-#   tools/install-ecos-nightly.sh [--dir DIR] [--tarball FILE] [--force]
+#   tools/install-ecos-nightly.sh [--dir DIR] [--tarball FILE] [--force] [--mirror]
 #
 # Downloads the v0.1.0-nightly.20261013 bundle from this repository's release
 # (a copy of the ecos-installer release), checks its SHA-256, extracts it, and
@@ -14,6 +14,12 @@
 #   - the bundle has no environment script; tools/ecos-env.sh is copied in.
 # Then it runs `ecos-env.sh --check`.
 #
+# --mirror downloads everything from the CNB mirrors under
+# https://cnb.cool/ecoslab/ instead of GitHub (useful when GitHub is slow or
+# blocked). The OSS CAD Suite mirror can lag a day behind the pinned build; in
+# that case the newest Linux x64 build the mirror has is used, with the SHA-256
+# published in the mirror's release metadata.
+#
 # On NixOS, run ECC inside `nix develop` from this repository: it provides the
 # host libraries the prebuilt binaries expect (xcb, fontconfig, libcrypt).
 set -euo pipefail
@@ -22,10 +28,16 @@ set -euo pipefail
 # bundle as its own release asset. While that release is not reachable (the
 # repo is still private), the download falls back to the original ecos-installer
 # release, which has the same bytes. Override any of these from the environment.
+#
+# CNB mirror origin (https://cnb.cool/ecoslab/...); --mirror uses these instead
+# of GitHub for every download in this script.
+MIRROR_ORIGIN="https://cnb.cool"
+
 TAG="${ECOS_RELEASE_TAG:-v0.1.0-nightly.20261013}"
 ASSET="${ECOS_RELEASE_ASSET:-ecos-nightly-linux-x86_64.tar.gz}"
 REPO="${ECOS_RELEASE_REPO:-openecos-projects/rvsc-tutorial-2026}"
 URL="${ECOS_RELEASE_URL:-https://github.com/${REPO}/releases/download/${TAG}/${ASSET}}"
+MIRROR_ECOS_URL="${MIRROR_ORIGIN}/ecoslab/ecos-installer/-/releases/download/${TAG}/${ASSET}"
 FALLBACK_URL="https://github.com/openecos-projects/ecos-installer/releases/download/${TAG}/${ASSET}"
 # SHA-256 of ecos-installer's v0.1.0-nightly.20261013 asset; the re-published
 # copy must be byte-identical.
@@ -36,15 +48,32 @@ OSS_CAD_ASSET="oss-cad-suite-linux-x64-20261019.tgz"
 OSS_CAD_URL="https://github.com/YosysHQ/oss-cad-suite-build/releases/download/${OSS_CAD_RELEASE}/${OSS_CAD_ASSET}"
 OSS_CAD_SHA256="ed9cbe56ed516bce72e97ccde489ab2be8d56a6a7f51068660e005b783b1c72f"
 # icsprout55-pdk commit "feat: add ICsprout55 GDS layer map"
-LAYERMAP_URL="https://raw.githubusercontent.com/openecos-projects/icsprout55-pdk/0a2ee73001ce1e7168b1e2779985875ef0c6ad00/techfile/icsprout55.layermap"
+LAYERMAP_COMMIT="0a2ee73001ce1e7168b1e2779985875ef0c6ad00"
+LAYERMAP_URL="${ECOS_LAYERMAP_URL:-https://raw.githubusercontent.com/openecos-projects/icsprout55-pdk/${LAYERMAP_COMMIT}/techfile/icsprout55.layermap}"
+MIRROR_LAYERMAP_URL="${MIRROR_ORIGIN}/ecoslab/icsprout55-pdk/-/git/raw/${LAYERMAP_COMMIT}/techfile/icsprout55.layermap"
 LAYERMAP_SHA256="513a9aefb48de2b3eadec1dd2fa1fb1c84bb0460cf40bf32cc56797b86a8b05d"
 
 HERE="$(cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 DIR="${HERE}/../ecos-nightly"
 TARBALL=""
 FORCE=0
+MIRROR=0
 
-usage() { sed -n '2,18p' "$0" | sed 's/^# \{0,1\}//' >&2; }
+usage() {
+  cat >&2 <<'USAGE'
+Install the ECOS nightly toolchain used in the RVSC 2026 tutorial.
+
+  tools/install-ecos-nightly.sh [--dir DIR] [--tarball FILE] [--force] [--mirror]
+
+  --dir DIR        install directory (default: <repo>/ecos-nightly)
+  --tarball FILE   use an already downloaded bundle tarball
+  --force          reinstall even if the bundle directory exists
+  --mirror         download from the CNB mirrors instead of GitHub:
+                   https://cnb.cool/ecoslab/ecos-installer/-/releases
+                   https://cnb.cool/ecoslab/oss-cad-suite-build
+                   https://cnb.cool/ecoslab/icsprout55-pdk (layer map)
+USAGE
+}
 log() { printf '[install] %s\n' "$*" >&2; }
 die() { log "error: $*"; exit 1; }
 
@@ -53,10 +82,53 @@ while [ "$#" -gt 0 ]; do
     --dir) DIR="$2"; shift 2 ;;
     --tarball) TARBALL="$2"; shift 2 ;;
     --force) FORCE=1; shift ;;
+    --mirror) MIRROR=1; shift ;;
     -h|--help) usage; exit 0 ;;
     *) usage; die "unknown option: $1" ;;
   esac
 done
+
+if [ "$MIRROR" = 1 ]; then
+  # An explicit ECOS_RELEASE_URL / ECOS_LAYERMAP_URL still wins over --mirror.
+  if [ -z "${ECOS_RELEASE_URL:-}" ]; then
+    URL="$MIRROR_ECOS_URL"
+  fi
+  FALLBACK_URL=""   # the mirror is the only source in mirror mode
+  if [ -z "${ECOS_LAYERMAP_URL:-}" ]; then
+    LAYERMAP_URL="$MIRROR_LAYERMAP_URL"
+  fi
+fi
+
+# The CNB mirror lags behind GitHub for the daily OSS CAD Suite builds. In
+# --mirror mode, use the pinned release when the mirror already has it;
+# otherwise take the newest linux-x64 asset from the mirror's release list and
+# the SHA-256 the mirror publishes for it.
+resolve_mirror_oss_cad() {
+  local pinned code releases page path sha re
+  pinned="${MIRROR_ORIGIN}/ecoslab/oss-cad-suite-build/-/releases/download/${OSS_CAD_RELEASE}/${OSS_CAD_ASSET}"
+  code="$(curl -sIL -o /dev/null -w '%{http_code}' --max-time 30 "$pinned" || true)"
+  if [ "$code" = 200 ]; then
+    OSS_CAD_URL="$pinned"
+    log "using mirror OSS CAD Suite $OSS_CAD_RELEASE"
+    return 0
+  fi
+
+  releases="${MIRROR_ORIGIN}/ecoslab/oss-cad-suite-build/-/releases"
+  log "mirror has no OSS CAD Suite $OSS_CAD_RELEASE; looking for the newest build"
+  page="$(curl -fsSL --retry 3 --retry-all-errors --max-time 60 "$releases")" ||
+    die "cannot read the mirror's release list: $releases"
+  # The releases page embeds its metadata as JSON, newest release first.
+  re='"path":"([^"]*oss-cad-suite-linux-x64-[0-9]+\.tgz)","name":"[^"]*","content_type":"application/gzip","hash_algo":"sha256","hash_value":"([0-9a-f]{64})"'
+  [[ $page =~ $re ]] || die "no linux-x64 OSS CAD Suite asset on the mirror: $releases"
+  path="${BASH_REMATCH[1]}"
+  sha="${BASH_REMATCH[2]}"
+
+  OSS_CAD_ASSET="${path##*/}"
+  OSS_CAD_RELEASE="${path%/*}"; OSS_CAD_RELEASE="${OSS_CAD_RELEASE##*/}"
+  OSS_CAD_URL="${MIRROR_ORIGIN}${path}"
+  OSS_CAD_SHA256="$sha"
+  log "using mirror OSS CAD Suite $OSS_CAD_RELEASE ($OSS_CAD_ASSET)"
+}
 
 [ "$(uname -s)-$(uname -m)" = "Linux-x86_64" ] || die "only Linux x86_64 is supported"
 for cmd in curl tar sha256sum; do
@@ -75,8 +147,12 @@ else
     if [ -f "$TARBALL" ] && echo "$SHA256  $TARBALL" | sha256sum -c --status; then
       log "reusing downloaded $TARBALL"
     else
+      SOURCES=("$URL")
+      if [ -n "$FALLBACK_URL" ]; then
+        SOURCES+=("$FALLBACK_URL")
+      fi
       downloaded=0
-      for src in "$URL" "$FALLBACK_URL"; do
+      for src in "${SOURCES[@]}"; do
         # A missing asset (404, e.g. the repo is still private) skips to the
         # next source right away; only real transfer errors are retried.
         code="$(curl -sIL -o /dev/null -w '%{http_code}' --max-time 30 "$src" || true)"
@@ -121,9 +197,16 @@ fi
 
 # Patch 2: yosys (OSS CAD Suite) into <bundle>/oss-cad-suite.
 OSS_CAD="$ROOT/oss-cad-suite"
-if [ -x "$OSS_CAD/bin/yosys" ] && [ "$(cat "$OSS_CAD/.ecos-release" 2>/dev/null)" = "$OSS_CAD_RELEASE" ]; then
-  log "OSS CAD Suite $OSS_CAD_RELEASE already present"
+installed_release="$(cat "$OSS_CAD/.ecos-release" 2>/dev/null || true)"
+# In mirror mode the mirror decides which daily build is available; keep an
+# existing installation instead of re-downloading 750 MB whenever it moves on.
+if [ -x "$OSS_CAD/bin/yosys" ] && [ -n "$installed_release" ] &&
+  { [ "$MIRROR" = 1 ] || [ "$installed_release" = "$OSS_CAD_RELEASE" ]; }; then
+  log "OSS CAD Suite $installed_release already present"
 else
+  if [ "$MIRROR" = 1 ]; then
+    resolve_mirror_oss_cad
+  fi
   OSS_TARBALL="${OSS_CAD_TARBALL:-$DIR/$OSS_CAD_ASSET}"
   if [ -f "$OSS_TARBALL" ] && echo "$OSS_CAD_SHA256  $OSS_TARBALL" | sha256sum -c --status; then
     log "reusing downloaded $OSS_TARBALL"
