@@ -317,6 +317,13 @@ html.dark .slidev-layout code {
   line-height: 1.35 !important;
 }
 
+/* 更紧凑: 宽表格输出 (sweep-table.sh 等) */
+.code-xs pre,
+.code-xs .shiki {
+  font-size: 0.58em !important;
+  line-height: 1.3 !important;
+}
+
 /* ---------- Code blocks ---------- */
 
 .slidev-layout pre {

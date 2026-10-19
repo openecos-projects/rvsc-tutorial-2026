@@ -21,6 +21,17 @@ defaults:
   transition: slide-left
 ---
 
+<div class="h-full flex flex-col items-center justify-center gap-6 text-xl">
+  <div class="text-sm opacity-60">本次 Tutorial 的 Slides</div>
+  <a href="https://rvsc26.openecos.com/" class="text-3xl">rvsc26.openecos.com</a>
+  <div class="mt-6 grid grid-cols-[auto_auto] gap-x-6 gap-y-2 text-base opacity-80">
+    <span class="text-right opacity-70">仓库</span>
+    <a href="https://github.com/openecos-projects/rvsc-tutorial-2026">github.com/openecos-projects/rvsc-tutorial-2026</a>
+    <span class="text-right opacity-70">国内镜像</span>
+    <a href="https://cnb.cool/ecoslab/rvsc-tutorial-2026">cnb.cool/ecoslab/rvsc-tutorial-2026</a>
+  </div>
+</div>
+
 <!--
 演讲开始前停留在此空白页。
 翻到下一页时，封面元素将依次浮现。
@@ -513,26 +524,23 @@ hideInToc: true
 <div>
 
 ```bash
-ecc run --workspace u0.4   # 默认 preset = rtl2gds
-ecc status --workspace u0.4   # 另开终端看进度
+ecc run --workspace u0.4          # 默认 preset = rtl2gds
+ecc status --workspace u0.4       # 另开终端看进度
 ecc log placement --workspace u0.4
+ecc signoff inspect --workspace u0.4
 ```
 
 <div class="code-sm">
 
 ```console
-synthesis      0:0:20   lvs           0:0:0
-pre_floorplan  0:0:0    drc           0:0:0
-macro_place    0:0:1    antennacheck  0:0:0
-post_floorplan 0:0:0    postroutelec  0:0:2
-preplace       0:0:13   rcx           0:0:1
-placement      0:25:26  sta           0:0:57
-diff_sizing    0:9:3    poweranalysis 0:0:6
-cts            0:0:12   emir          incomplete
-legalization   0:0:0    harden        unstart
-timing_opt     0:0:15
-routing        0:0:3
-filler         0:0:0
+synthesis           0:0:17   routing         0:0:9
+pre_floorplan       0:0:0    filler          0:0:0
+macro_placement     0:0:1    lvs             0:0:0
+post_floorplan      0:0:0    drc             0:0:0
+placement           0:1:34   rcx             0:0:0
+cts                 0:0:18   sta             0:2:3
+legalization        0:0:0    poweranalysis   0:0:11
+timing_optimization 0:0:32   harden          0:0:9
 ```
 
 </div>
@@ -543,10 +551,10 @@ filler         0:0:0
 
 ### 读懂这张表
 
-- `rtl2gds` 一共 **21 步**,每一步一个子目录：`u0.4/<Step>_<tool>/{log,output,report}`
+- `rtl2gds` 这次跑 **16 步** (`skip_steps = ["lec", "postRouteLec"]`),每一步一个子目录：`u0.4/<Step>_<tool>/{log,output,report}`
 - 失败后 `ecc run --workspace u0.4 --resume` 从断点续跑，已成功的步骤不重跑
-- 大头是 **placement + diff_sizing**,gcd 在 8 核 CPU 上约 35 分钟
-- 签核链比较长：LVS · DRC · antenna check · post-route LEC · RCX · 13 corner STA · power · EMIR
+- 大头是 **STA (2:03) 和 placement (1:34)**,gcd 在 8 核 CPU 上全程约 **5 分钟**
+- 签核链：**LVS · DRC · RCX · 13 corner STA · power · Harden**;这次 `signoff inspect` 是 `ready`
 
 <div class="mt-4">
 
@@ -559,10 +567,10 @@ filler         0:0:0
 </div>
 
 <!--
-数据来自 2026-10-17 实测:ECC emin/add-agent-ctrl (d5b04c3c),gcd core_util=0.4,8 核 CPU、无 GPU
-左侧是 ecc status --plain 的整理版 (原始输出每步两行，太长)
-emir incomplete:nightly PDK 缺 EMIR 工艺文件 (EMIR technology_file_path is a placeholder),PDK 修好后重跑并替换
-diff_sizing 需要约 6.3 GiB 可用内存;placement 在 CPU 上收敛慢 (overflow 在 0.18~0.33 间震荡约 430 次迭代)
+数据来自 2026-10-19 实测:ecos-nightly v0.1.0-nightly.20261013 (ECC 27084f4),gcd core_util=0.4,8 核 CPU、无 GPU
+左侧是 ecc status --plain 的整理版 (原始输出每步两行，太长),总运行时间 5m14s,峰值内存 1527.50 MB
+16 步全部 success,`ecc signoff inspect` 返回 status=ready;harden 产出 u0.4/Harden_ecc/output/gcd_Harden.gds
+STA 按 MAX / WCL / TYP / MIN / ML 五种 liberty corner 组合出 13 个分析 corner,单步最久 (2:03)
 -->
 
 ---
@@ -599,21 +607,20 @@ ecc signoff export --workspace u0.4 -o gcd.tar.gz
 
 ```console
 [ 1. PHYSICAL & AREA METRICS ]
-  Die Area            2161.44 um²
-  Core Utilization    45 %
+  Die Area            2170.92 um²
+  Core Utilization    48 %
 [ 2. TIMING CLOSURE & PERFORMANCE ]
   Target Clock Period 10 ns       Target freq: 100 MHz
-  Achieved Fmax       487 MHz
-  Setup Slack (WNS)   7.95 ns     TIMING MET
-  Hold Slack  (WNS)   0.04 ns     TIMING MET
+  Achieved Fmax       412 MHz
+  Setup Slack (WNS)   7.57 ns     TIMING MET
+  Hold Slack  (WNS)   0.08 ns     TIMING MET
 [ 7. PHYSICAL VERIFICATION ]
   DRC Status          CLEAN (0 violations)  PASS
   LVS Status          MATCHED (Clean)       PASS
 
 [signoff]
-  status : blocked
-  risks:
-    [blocked] Signoff checklist unavailable   # emir 未跑完
+  status : ready
+  checks : 31/31 passed (7 groups)
 ```
 
 </div>
@@ -623,10 +630,10 @@ ecc signoff export --workspace u0.4 -o gcd.tar.gz
 > GUI 的 Export Signoff Package / Checklist / Key Metrics = 这里的 `signoff export` / `signoff inspect` / `report summary`
 
 <!--
-数据来自 2026-10-17 实测:ECC emin/add-agent-ctrl,gcd core_util=0.4
-DRC/LVS/STA 都通过，但 emir 缺 PDK 的 EMIR 工艺文件没跑完，所以 Harden 没跑、签核清单不可用 → blocked
-PDK 修好后重跑：期望 signoff 变为 attention (只缺 macro_locations 这类可选项),并替换为 Harden 版图
-只有 blocked 才会拒绝导出，attention 不影响
+数据来自 2026-10-19 实测:ecos-nightly v0.1.0-nightly.20261013 (ECC 27084f4),gcd core_util=0.4,8 核 CPU
+16 步全部 success,总运行时间 5m14s,峰值内存 1527.50 MB;`ecc signoff inspect` 为 ready,31/31 checks 通过
+Harden 产出 u0.4/Harden_ecc/output/gcd_Harden.gds (另有 LEF/LIB/PNG)
+版图缩略图仍是之前 gcd u0.4 的 filler 渲染;数值以这次 nightly 重跑为准
 -->
 
 ---
@@ -747,16 +754,16 @@ hideInToc: true
 
 <div class="text-sm">
 
-| 利用率 | 标准单元 | Die 面积 | MPW 估价 | DRC |
-| ------ | -------- | -------- | -------- | --- |
-| 0.40   | 818 µm²  | 2161 µm² | 64.8 元  | ✅ clean |
-| 0.75   | 816 µm²  | 1211 µm² | 36.3 元  | ❌ 11 处 |
+| 利用率 | 标准单元 | Die 面积 | MPW 估价 | DRC / LVS |
+| ------ | -------- | -------- | -------- | --------- |
+| 0.40   | 878.64 µm² | 2170.92 µm² | 65.1 元 | ✅ / ✅ |
+| 0.60   | 885.64 µm² | 1497.60 µm² | 44.9 元 | ✅ / ✅ |
 
 </div>
 
 <div class="mt-3">
 
-> 电路几乎没变，面积省了 **44%**。<br>
+> 电路几乎没变，0.40 → 0.60 面积省了 **31%**；0.75 能到 1211 µm²（省 44%），但 Sizer 插 hold buffer 后利用率 105%，签核不过。<br>
 > 问题变成：**能签核的最大利用率是多少？**
 
 </div>
@@ -766,16 +773,14 @@ hideInToc: true
 </div>
 
 <!--
-gcd 数据来自 2026-10-17 实测:ECC emin/add-agent-ctrl,u0.4 / u0.75 的 ecc report summary
-标准单元面积两者几乎相同 (818.44 vs 815.64 µm²),说明省下的全是"空白"
-MPW 估价 = Die 面积 × 30000 元/mm²:2161.44 µm² → 64.84 元，1211.04 µm² → 36.33 元
-0.75 的 DRC 11 处 (4 处 metal short + 7 处 spacing),所以这里还不能直接用 0.75 —— 引出下一页的调参
-实际报告里的 Core Utilization 是 45% / 86%,和设定值 0.4 / 0.75 不完全相等 (tap cell、站点对齐等)
-ECC 的 PDN 没有 power ring (2026-10-17 核对 u0.4):
-- config/floorplan_ecc.json 的 pdn_generator 只有 global_connect / rail / stripe / connect_layers 四项，没有 ring
-- 布线后 DEF 的 SPECIALNETS (VDD/VSS) 只有 FOLLOWPIN (MET1 rail) 和 STRIPE (MET1~MET5),SHAPE RING 为 0
-- core 与 die 之间只有 die_builder.margin = 2 µm,54 个 IO pin 放在 die 边上
-- 所以 core 外圈的"边距"很窄，面积差主要来自 core 内部的空白 (利用率)
+gcd 数据来自 2026-10-19 实测:ecos-nightly v0.1.0-nightly.20261013 (ECC 27084f4)
+- u0.4 / u0.6 的 ecc report summary:标准单元 878.64 / 885.64 µm²,die 2170.92 / 1497.60 µm²
+- MPW 估价 = Die 面积 × 30000 元/mm²:2170.92 µm² → 65.13 元,1497.60 µm² → 44.93 元
+- 0.40→0.60 面积节省 1 - 1497.60/2170.92 = 31.0%;0.40→0.75 是 44.2%
+- u0.75 在 timing_optimization 失败:Sizer 插入 44 个 hold buffer,利用率 105.4%,DPL-0038;die 1211.04 µm²
+- 所以 0.75 的面积不能用;能签核的目前是 0.60,下一轮试 0.65
+- 报告里的 Core Utilization 是 48% / 74% / 76%,和设定值 0.4 / 0.6 / 0.75 不完全相等 (tap cell、sizer/hold buffer 等)
+- ECC 的 PDN 没有 power ring:core 与 die 之间只有 die_builder.margin = 2 µm,面积差主要来自 core 内部空白
 -->
 
 ---
@@ -799,14 +804,15 @@ die  = core + 四周 core_margin
 
 </div>
 
-gcd 实测，综合 cell 面积 709.24 µm²:
+gcd 实测，综合 cell 面积 711.48 µm²:
 
 <div class="text-sm">
 
-| `core_util` | 709.24 ÷ util | 实际 core |
+| `core_util` | 711.48 ÷ util | 实际 core |
 | ----------- | ------------- | --------- |
-| 0.40        | 1773 µm²      | 1805 µm²  |
-| 0.75        | 946 µm²       | 949 µm²   |
+| 0.40        | 1779 µm²      | 1814 µm²  |
+| 0.60        | 1186 µm²      | 1204 µm²  |
+| 0.75        | 949 µm²       | 949 µm²   |
 
 </div>
 
@@ -823,8 +829,8 @@ gcd 实测，综合 cell 面积 709.24 µm²:
 | **`floorplan.core_util`** | 0.4        | **改这个**,决定 core 有多大  |
 | `floorplan.core_margin`   | `[2, 2]`   | core 到 die 边的距离 (µm)    |
 | `floorplan.aspect_ratio`  | 1.0        | core 宽高比                  |
-| `die_builder.mode`        | `die_util` | `die_size` 则直接给宽高      |
-| `place.target_density`    | 0.4        | placement 目标密度，不改面积 |
+| `floorplan.<br>die_builder.mode` | `die_util` | `die_size` 则直接给宽高      |
+| `place.target_density`    | 0.2        | placement 目标密度，不改面积 |
 
 </div>
 
@@ -833,14 +839,14 @@ gcd 实测，综合 cell 面积 709.24 µm²:
 </div>
 
 <!--
-数据来自 2026-10-17 实测:ECC emin/add-agent-ctrl,gcd
-- 综合 cell 面积:Synthesis.log 里 "Chip area for module '\gcd': 709.240000"
-- core 面积:postFloorplan 的 qor_metrics.json,1805.44 / 948.64 µm²
-- 709.24 / 0.4 = 1773.1,709.24 / 0.75 = 945.7，和实际 core 面积相差 1.8% / 0.3%,差值来自行高和 site 对齐取整
-- 参数列表来自 ecc param list --step floorplan;core_margin 默认 [2, 2] µm，和 DEF 里 ROW 起点 (2000, 2000) 一致
-place.target_density 的证据:place.log 里 "target_density 0.4 is smaller than utilization 0.530044, ignored"(u0.75 是 0.855743)
-所以想压面积，只需要改 floorplan.core_util;DRC 不过时，可以再考虑调 target_density 让 cell 摆得更匀
-报告里的 Core Utilization (45% / 86%) 比设定值高，因为它按 Sizer 和 hold buffer 之后的 cell 面积算，cell 变多了
+数据来自 2026-10-19 实测:ecos-nightly v0.1.0-nightly.20261013,gcd
+- 综合 cell 面积:Synthesis.log 里 "Chip area for module '\gcd': 711.480000"
+- core 面积:postFloorplan 的 qor_metrics.json,1814.12 / 1204 / 948.64 µm²
+- 711.48 / 0.4 = 1778.7,711.48 / 0.6 = 1185.8,711.48 / 0.75 = 948.64;0.40 差 2.0%,0.60 差 1.5%,0.75 正好
+- 参数列表来自 ecc param list --step floorplan / place;core_margin 默认 [2, 2] µm
+place.target_density 的证据:place.log 里 "target_density 0.2 is smaller than utilization 0.533888, ignored"(u0.75 是 0.858446)
+所以想压面积，只需要改 floorplan.core_util;target_density 不改变 core 大小
+报告里的 Core Utilization 是 48% / 74% / 76%,比设定值高，因为它按 Sizer 和 hold buffer 之后的 cell 面积算
 -->
 
 ---
@@ -859,12 +865,12 @@ hideInToc: true
 # 看参数：值 / 默认 / 范围 / 作用的步骤
 ecc param show floorplan.core_util
 # 每个变体开一个 workspace，原结果不动
+ecc run --workspace u0.6 --set floorplan.core_util=0.6
 ecc run --workspace u0.75 --set floorplan.core_util=0.75
-ecc run --workspace f200 --set design.frequency_mhz=200
 # 中断 / 失败后续跑，已成功的步骤不重跑
 ecc run --workspace u0.75 --resume
 # 看对比
-ecc signoff inspect --workspace u0.75
+ecc signoff inspect --workspace u0.6
 ```
 
 <div class="code-sm">
@@ -923,15 +929,15 @@ CLI 适合**批量跑 Flow**,GUI 适合**用来查看具体报错信息**。两�
 1. 启动 AppImage (不带 `--cli`)
 2. **Projects** 页 → **Import Project**
 3. 选择 `~/ecc-demo/gcd` (含 `project.json` 的目录)
-4. 列表里出现 `u0.4`、`u0.75`、`u0.85` … 每个 workspace 一行
+4. 列表里出现 `u0.4`、`u0.6`、`u0.75`、`u0.9` … 每个 workspace 一行
 
 ```text
 gcd/
 ├── ecc.toml        # 项目声明
 ├── project.json    # workspace 登记表 ← GUI 读这个
 ├── u0.4/
-├── u0.75/
-└── u0.85/
+├── u0.6/
+└── u0.75/
 ```
 
 </div>
@@ -1033,28 +1039,30 @@ hideInToc: true
 
 # 手工迭代的代价
 
-用 gcd 做一次“最大利用率”扫描 (8 核 CPU,0.75 与 0.4 两组并行):
+用 gcd 做一次“最大利用率”扫描 (8 核 CPU,逐个跑):
 
 <div class="text-sm">
 
-| `core_util` | 失败/停在哪一步         | 耗时    | Die Area | Fmax    | DRC / LVS              |
-| ----------- | ----------------------- | ------- | -------- | ------- | ---------------------- |
-| 0.40 (默认) | emir (缺 PDK 文件)      | ~37 min | 2161 um² | 487 MHz | ✅ clean / ✅ matched   |
-| 0.75        | emir (缺 PDK 文件)      | ~40 min | 1211 um² | 314 MHz | ❌ 11 处 / ❌ 4 处       |
-| 0.85        | timing_optimization     | ~11 min | —        | —       | 没跑到                 |
+| `core_util` | 结果 | 耗时 | 失败位置 / 原因 |
+| ----------- | ---- | ---- | --------------- |
+| 0.40 (默认) | ✅ 签核通过 | 5m14 | — |
+| 0.60 | ✅ 签核通过 | 8m17 | — |
+| 0.75 | ❌ 失败 | ~48 s | timing_opt:Sizer 插 hold buffer,利用率 105% |
+| 0.90 | ❌ 失败 | ~11 s | placement:utilization > 0.99 |
 
 </div>
 
-- 每一轮都要半小时以上，大头是 placement 和 diff_sizing
-- **失败可能出现在任何一步**:0.85 在 Sizer 插 hold buffer 后利用率超过 100%,0.75 布线后 DRC 不干净
-- 跑完 ≠ 能签核：一定要看 `signoff inspect`,不能只看 exit code
+- 0.70 也在 placement 失败（普通合法化过不了）：**结果不单调**，不能只二分
+- 一轮 5~8 分钟，比之前快；但一次扫描仍要跑多个变体
+- 跑完 ≠ 能签核：0.40 / 0.60 的 `signoff inspect` 才是 ready
 
 <!--
-数据来自 2026-10-17 实测:ECC emin/add-agent-ctrl (d5b04c3c),gcd,8 核 CPU、无 GPU
-0.4 / 0.75 都卡在 emir:nightly PDK 缺 EMIR 工艺文件 (PDK 修好后重跑这张表)
-0.85:Sizer 插入 35 个 hold buffer (+11.9% 面积),利用率 109.2%,合法化 DPL-0038 失败
-0.75 的 Fmax 314 MHz 比 0.4 低：拥挤后走线更长;仍高于 100 MHz 目标
-单轮耗时：两组并行时 placement 约 25 min,diff_sizing 7~9 min
+数据来自 2026-10-19 实测:ecos-nightly v0.1.0-nightly.20261013 (ECC 27084f4),gcd,8 核 CPU、无 GPU
+- u0.4:16 步全部 success,5m14;u0.6:16 步全部 success,8m17;两者 signoff inspect 都是 ready
+- u0.75:Sizer 插 44 个 hold buffer,利用率 105.4%,DPL-0038;wall ~48 s
+- u0.90:placement 直接报 utilization is larger than 0.99;wall ~11 s
+- u0.70:placement 报 ordinary legalization failed before M2 soft legalization;wall ~16 s
+- u0.4/u0.6 的 die area 2170.92 / 1497.60 µm²,Fmax 412 / 421 MHz
 -->
 
 ---
@@ -1079,7 +1087,7 @@ flowchart LR
 ```
 
 - ECC 的输出自带下一步提示 (`inspect:` / `log:` / `run:`),`--plain` 一行一条，适合机器读
-- 每轮半小时以上：现场跑不完，要提前跑，并行、早停、先粗后细
+- 一轮 **5~8 分钟**：现场能跑 baseline，但完整扫描仍要提前准备；并行、早停、先粗后细
 - 人负责定目标、给预算、划边界，最后在 GUI 里复核
 
 <!--
@@ -1119,16 +1127,16 @@ and use it to explore the highest util by following best practices.
 
 ```bash
 scripts/sweep-table.sh ~/ecc-demo/gcd \
-  u0.4 u0.75 u0.85
+  u0.4 u0.6 u0.75
 ```
 
-<div class="code-sm">
+<div class="code-xs">
 
 ```text
-workspace flow   failed_step    die_area    util fmax
-u0.4      failed emir           2161.44 um² 45 % 487 MHz
-u0.75     failed emir           1211.04 um² 86 % 314 MHz
-u0.85     failed timing_opt     1095.52 um² 85 % 100 MHz
+workspace flow    signoff failed_step  die_area     util
+u0.4      success ready   -            2170.92 um²  48 %
+u0.6      success ready   -            1497.60 um²  74 %
+u0.75     failed  -       timing_opt   1211.04 um²  76 %
 ```
 
 </div>
@@ -1156,39 +1164,42 @@ hideInToc: true
 
 ```mermaid {scale: 0.5}
 flowchart TB
-  S["baseline 0.40<br/>单轮 ~37 min"] --> R1["第 1 轮 (并行)<br/>0.75 · 0.85"]
-  R1 --> A["0.85 ❌ timing_opt<br/>hold buffer 撑爆利用率"]
-  R1 --> B["0.75 ❌ DRC 11 · LVS 4"]
-  A --> D{"区间 (0.40, 0.75)"}
+  S["baseline 0.40<br/>签核 ready · 5m14"] --> R1["第 1 轮 (并行)<br/>0.60 · 0.75 · 0.90"]
+  R1 --> A["0.60 ✅ 签核 ready<br/>8m17"]
+  R1 --> B["0.75 ❌ timing_opt<br/>hold buffer 撑爆利用率"]
+  R1 --> C["0.90 ❌ placement<br/>util > 0.99"]
+  A --> D{"区间 (0.60, 0.75)"}
   B --> D
-  D --> R2["第 2 轮：在 0.40 ~ 0.75 细分"]
+  D --> R2["第 2 轮：0.65"]
 
   classDef bad fill:#fffaf3,stroke:#b4637a,color:#b4637a;
-  class A,B bad;
+  class B,C bad;
 ```
 
 </div>
 
 <div class="text-sm">
 
-| util | 停在           | Die Area | DRC / LVS     |
-| ---- | -------------- | -------- | ------------- |
-| 0.40 | emir           | 2161 um² | ✅ / ✅        |
-| 0.75 | emir           | 1211 um² | ❌ 11 / ❌ 4   |
-| 0.85 | timing_opt     | —        | 没跑到        |
+| util | 停在       | Die Area | signoff |
+| ---- | ---------- | -------- | ------- |
+| 0.40 | —          | 2170.92 um² | ready   |
+| 0.60 | —          | 1497.60 um² | ready   |
+| 0.75 | timing_opt | 1211.04 um² | —       |
+| 0.90 | placement  | —        | —       |
 
 </div>
 
 </div>
 
-> 当前能下的结论：最大可签核利用率在 **0.40 ~ 0.75** 之间 —— 每一轮都要半小时，第二轮请提前跑好
+> 当前能下的结论：0.60 已签核通过，最大可签核利用率在 **0.60 ~ 0.75** 之间 —— 下一轮试 0.65；每轮 5~8 分钟，可以提前跑好
 
 <!--
-数据来自 2026-10-17 实测:ECC emin/add-agent-ctrl (d5b04c3c),gcd,8 核 CPU
-0.4 / 0.75 都卡在 emir(缺 PDK 的 EMIR 工艺文件),所以严格说两者都还没"可签核";PDK 修好后重跑这页
-0.75 DRC:4 处 metal_short (MET3 ×3、MET4 ×1) + 7 处 parallel_run_length_spacing;LVS 4 处 mismatch
-0.85:Sizer 插入 35 个 hold buffer，利用率 109.2%
-复核点:GUI 里打开 u0.75，看 DRC 页违例集中在哪里
+数据来自 2026-10-19 实测:ecos-nightly v0.1.0-nightly.20261013 (ECC 27084f4),gcd,8 核 CPU
+- 0.40:5m14,412 MHz,2170.92 µm²,signoff ready
+- 0.60:8m17,421 MHz,1497.60 µm²,signoff ready;GUI 的 QoR 推荐仍是 u0.4 (94.2 vs 83.4)
+- 0.75:timing_opt 失败 (44 hold buffers,105.4%,DPL-0038);die 1211.04 µm²
+- 0.90:placement 失败 (utilization > 0.99);0.70 也在 placement 失败 (结果不单调)
+- 下一轮试 0.65,必要时再试 0.68;0.70 已失败,不要重复
 -->
 
 ---
@@ -1214,7 +1225,7 @@ flowchart LR
   class A,E,W,G tool;
 ```
 
-- flow 要跑十几分钟，GUI 只需几秒打开结果：跑在后台，现场只演示"看"
+- flow 在后台跑，GUI 只需几秒打开结果：现场只演示“看”
 - `--cli` 和 GUI 必须来自同一个构建，否则 GUI 打不开 workspace
 - 控制默认关闭，由人启动时加 `--enable-ctrl`,顶部提示条随时可以 Disconnect
 
@@ -1225,9 +1236,9 @@ run the gcd flow with --cli, then open the workspace in the running ECOS Studio 
 
 <!--
 现场顺序：
-1. 演讲前用开发分支的 --cli 把 workspace 跑完 (现场机器上一轮 > 30 min，不要现场跑)
-2. 现场只做 ②③:load → 打开 workspace → 点 Sign-off details，全程有字幕
-3. 所有 CLI 页和这页用的是同一个 ECC (emin/add-agent-ctrl),数字可以互相对照
+1. CLI 数据页用 nightly 包 (u0.4 / u0.6,一轮 5~8 min);这页的 --cli/--ctrl 演示用支持 cli_contract 的开发分支
+2. 演讲前用开发分支的 --cli 把 u0.75 跑完;现场只做 ②③:load → 打开 workspace → 点 Sign-off details
+3. 两套 workspace 格式相同,但 nightly 没有 emir/diff_sizing,所以 CLI 页更快、能签核;不要拿两边的数字直接对比
 -->
 
 ---
@@ -1272,7 +1283,8 @@ click **Sign-off details**:每一项都有证据链接
 
 <!--
 截图来自 2026-10-17 彩排：开发分支 ECC (--cli),gcd core_util=0.75
-彩排时签核仍是 blocked:开发分支新增的 emir 步骤需要 PDK 里的 EMIR 工艺文件 (PDK 修好后重跑并替换截图)
+这批截图仍是 blocked (emir 缺 PDK 文件);CLI 数据页已换成 nightly u0.4 / u0.6 (签核 ready)
+正式演示如果打开 nightly u0.6,签核页会是 31/31 ready,最好现场重拍/替换这两张截图
 emir 报错原文:EMIR technology_file_path is a placeholder
 开发分支 ECC 还有两个已知问题，见 skills/ecos-ctrl-demo/reference/known-issues.md ECC-7/8:
 - diff_sizing 需要约 6.3 GiB 可用内存
@@ -1463,8 +1475,8 @@ hideInToc: true
 - **成功判定分散**:`status=success` ≠ 能签核，还要再调 `signoff inspect`
 - **指标只给人看**:`report summary --json` 只返回文件路径，面积、时序要去读 txt
 - **缺资源预估**:不报告耗时和内存需求，`diff_sizing` 内存不够要到中途才失败
-- **启动开销**:每条命令约 1.5 s，轮询时会累积
-- **环境问题像设计问题**:缺 PDK 文件、缺系统库都表现为某一步 `failed`
+- **报错信息仍然有待改进**:很多报错信息仍然没有得到完整传播，
+  agent 只能靠看日志和试错来定位问题
 
 </div>
 
@@ -1540,23 +1552,18 @@ v0.1.0-alpha.8 ~ alpha.12 都没有这个命令，alpha.9 AppImage 的 ecc --hel
 hideInToc: true
 ---
 
-# 语言也是一种脚手架
+# 语言模型能力已经足够强，但仍然需要脚手架才能发挥
 
 <div class="mt-8 text-lg leading-relaxed">
 
-宇宙 138 亿年，人类语言只有几万年。语言不是宇宙的底层规律，而是晚近涌现的一层抽象。
-
-但它一旦出现，就让知识可以跨代累积，让协作规模突破血缘群体。
-
-**它既是脚手架，也是建筑的一部分。**
 
 </div>
 
 <div class="mt-8">
 
 - **编程语言**:人与计算机的协议 → 可能变成 AI 与 AI 之间的协议
-- **EDA**:人点按钮的工具 → 下沉为 Agent 调用的 API 和质量闸门
-- **ECOS**:同一个 ECC，给人用的 GUI，给 Agent 用的 CLI / ctrl
+- **EDA**:开发者点按钮，跑脚本的工具 → 下沉为 Agent 调用的 API 和质量闸门
+- **ECOS**:同一个 ECC，给开发者用的 GUI，给 Agent 用的 CLI / ctrl
 
 </div>
 
