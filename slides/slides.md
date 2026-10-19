@@ -994,12 +994,20 @@ u0.4 推荐:QoR 94.2 GREEN,412 MHz,Die Area 2170.9 µm²,DRC / LVS 都是 0
 
 
 ---
-layout: image-left
-image: /images/layout-view.png
+layout: two-cols
+layoutClass: gap-8
 hideInToc: true
 ---
 
-# Chip Viewer:看懂“为什么不过”
+::left::
+
+<div class="h-full flex items-center">
+  <img src="/images/chip-viewer-gcd.png" class="w-[112%] max-w-none -ml-11 rounded shadow" />
+</div>
+
+::right::
+
+# Chip Viewer:<br>看懂“为什么不过”
 
 数字之外，版图本身就是诊断信息：
 
