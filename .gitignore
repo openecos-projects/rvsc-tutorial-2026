@@ -21,6 +21,7 @@ slides-export.*
 ecos-nightly/
 ecos-nightly-*.tar.gz
 *.AppImage
+oss-cad-suite-*.tgz
 
 # logs
 *.log

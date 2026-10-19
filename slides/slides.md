@@ -386,7 +386,7 @@ hideInToc: true
 <div>
 
 ```bash
-# 下载、校验、解压，并补上环境脚本
+# 下载、校验、解压，补上 yosys 和环境脚本
 tools/install-ecos-nightly.sh
 
 source ecos-nightly/ecos-nightly-linux-x86_64/ecos-env.sh
@@ -395,7 +395,7 @@ ecc doctor          # 环境体检：yosys / sizer / kepler-formal
 ```
 
 - `ecos-env.sh` 把 `ecc`、Sizer、kepler-formal 放进 PATH，并指好 PDK
-- 包里**不含 yosys**:需要另装 OSS CAD Suite
+- 包里不含 yosys，安装脚本会顺带下载 OSS CAD Suite
 - 同一个 ECC 也给 ECOS Studio 用：`ecos-env.sh` 不带参数直接启动 Studio
 
 </div>
@@ -423,7 +423,7 @@ doctor=environment status=ok checked=9 failed=0
 <!--
 本页及后续 CLI 输出均来自 ecos-installer nightly v0.1.0-nightly.20261013 (ECC 27084f4),2026-10-19 实测
 tools/install-ecos-nightly.sh:下载并校验 SHA-256，补上 pdk/techfile/icsprout55.layermap (这个 nightly 的 PDK 缺它，pre_floorplan 会报 gds_save requires -layer_map),再装 ecos-env.sh
-yosys 不在 nightly 里：安装器 --with-toolchain，或在本仓库 nix develop 里 (devShell 提供 yosys 和 NixOS 缺的 xcb / fontconfig / libcrypt)
+yosys 不在 nightly 里：安装脚本下载 OSS CAD Suite 2026-10-19 到 bundle/oss-cad-suite,ecos-env.sh 设置 CHIPCOMPILER_OSS_CAD_DIR 指向它 (已设置时不覆盖，例如 nix develop);NixOS 上仍建议在 nix develop 里跑，补 xcb / fontconfig / libcrypt
 ECOS Studio 的 AppImage 目前不内置 ECC，而是通过 ECOS_ECC_BIN_DIR 用这个包里的 ecc (ecos-env.sh 会设置)
 -->
 

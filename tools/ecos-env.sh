@@ -179,6 +179,11 @@ fi
 if [ -d "$ECOS_BUNDLE_ROOT/pdk" ]; then
   export CHIPCOMPILER_ICS55_PDK_ROOT="$ECOS_BUNDLE_ROOT/pdk"
 fi
+# OSS CAD Suite installed by tools/install-ecos-nightly.sh. ECC finds yosys
+# through CHIPCOMPILER_OSS_CAD_DIR; an already-set value (e.g. nix develop) wins.
+if [ -z "${CHIPCOMPILER_OSS_CAD_DIR:-}" ] && [ -x "$ECOS_BUNDLE_ROOT/oss-cad-suite/bin/yosys" ]; then
+  export CHIPCOMPILER_OSS_CAD_DIR="$ECOS_BUNDLE_ROOT/oss-cad-suite"
+fi
 
 _ecos_env_fix_kepler_libs
 
@@ -211,8 +216,11 @@ if [ "$_ECOS_ENV_MODE" = check ]; then
   fi
   printf '%-8s %s\n' "studio" \
     "$(find "$ECOS_BUNDLE_ROOT/studio" -maxdepth 1 -name '*.AppImage' -print -quit 2>/dev/null)"
-  command -v yosys >/dev/null 2>&1 ||
-    _ecos_env_log "提示: PATH 上没有 yosys；跑 flow 需要 OSS CAD Suite（安装器 --with-toolchain 或 nix develop）"
+  if [ -n "${CHIPCOMPILER_OSS_CAD_DIR:-}" ] && [ -x "$CHIPCOMPILER_OSS_CAD_DIR/bin/yosys" ]; then
+    printf '%-8s %s\n' "yosys" "$("$CHIPCOMPILER_OSS_CAD_DIR/bin/yosys" -V 2>&1 | head -1)"
+  elif ! command -v yosys >/dev/null 2>&1; then
+    _ecos_env_log "提示: 没有 yosys；跑 flow 需要 OSS CAD Suite（tools/install-ecos-nightly.sh 会装到 bundle/oss-cad-suite，或 nix develop）"
+  fi
   if [ "$_ECOS_ENV_SOURCED" = 1 ]; then return 0; else exit 0; fi
 fi
 
