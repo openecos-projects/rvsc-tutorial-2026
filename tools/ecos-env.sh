@@ -17,6 +17,7 @@
 #   ECOS_STUDIO_NO_SANDBOX=1  启动时追加 --no-sandbox（Electron 沙箱不可用时）
 #   ECOS_STUDIO_NATIVE=1      强制原生运行 AppImage（默认在 NixOS 上走 nix run appimage-run）
 #   ECOS_STUDIO_NO_EXTRACT=1  原生运行时用 FUSE 挂载（默认自解压运行，不依赖 FUSE）
+#   ECOS_KEEP_NIX_LD=1        保留 dev shell 的 NIX_LD/NIX_LD_LIBRARY_PATH（默认启动时去掉）
 #   ECOS_ENV_VERBOSE=1        source 时打印完整信息
 
 # shellcheck shell=bash
@@ -42,8 +43,20 @@ ECOS Studio nightly 工具链环境脚本
 
 环境变量：ECOS_BUNDLE_ROOT / ECOS_LOCAL_ECC / ECOS_ECC_BIN_DIR / ECOS_USE_BUNDLE_ECC /
          ECOS_STUDIO_ARGS / ECOS_STUDIO_NO_SANDBOX / ECOS_STUDIO_NATIVE /
-         ECOS_STUDIO_NO_EXTRACT / ECOS_ENV_VERBOSE
+         ECOS_STUDIO_NO_EXTRACT / ECOS_KEEP_NIX_LD / ECOS_ENV_VERBOSE
 USAGE
+}
+
+# 启动 Studio 时使用的 loader 环境：nix develop / nix-shell 里 NIX_LD 指向该
+# shell 的 glibc（例如 2.40），而 bundle 里 kepler-formal 需要的 libxcrypt 是按
+# 更新版本的 glibc 编译的，会报 "GLIBC_2.43 not found"。启动时把这两个变量去掉，
+# 让外来二进制（kepler-formal、OSS CAD Suite）走系统 loader / appimage-run 的 FHS。
+_ecos_env_launch_env() {
+  if [ "${ECOS_KEEP_NIX_LD:-0}" = 1 ]; then
+    env "$@"
+  else
+    env -u NIX_LD -u NIX_LD_LIBRARY_PATH "$@"
+  fi
 }
 
 # 把目录放到变量（PATH / LD_LIBRARY_PATH）最前面，并去掉重复项。
@@ -72,38 +85,41 @@ _ecos_env_prepend() {
 # 只补缺失的库，并且必须实测能跑起来才生效，避免注入不兼容的版本。
 _ecos_env_fix_kepler_libs() {
   local kepler="$ECOS_BUNDLE_ROOT/kepler-formal"
-  local probe lib found
-  local -a missing=() dirs=()
+  local out lib found target
   [ -x "$kepler/kepler-formal" ] || return 0
   [ -d "$kepler/lib" ] || return 0
   [ -d /nix/store ] || return 0
 
-  probe="$(LD_LIBRARY_PATH="$kepler/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" \
-    ldd "$kepler/bin/kepler-formal" 2>/dev/null)" || return 0
-  mapfile -t missing < <(printf '%s\n' "$probe" | awk '/not found/ {print $1}')
-  [ "${#missing[@]}" -gt 0 ] || return 0
-
-  for lib in "${missing[@]}"; do
-    [ -n "$lib" ] || continue
+  # 直接按 ECC 的调用方式试跑：它会在拉起 kepler-formal 前 pop LD_LIBRARY_PATH/
+  # LD_PRELOAD（只信任随附 wrapper 设置的 $SCRIPT_DIR/lib），所以缺的库必须补进
+  # bundle 的 lib/ 才会生效。这里逐次解析 loader 的缺失库并重试（不用 ldd：
+  # nix shell 里的 ldd 用的是 shell 自己的 glibc，会误判）。
+  for _ in 1 2 3 4 5; do
+    out="$(_ecos_env_launch_env -u LD_LIBRARY_PATH -u LD_PRELOAD \
+      "$kepler/kepler-formal" --version 2>&1)" && return 0
+    lib="$(printf '%s\n' "$out" |
+      sed -n 's/.*error while loading shared libraries: \([^:]*\):.*/\1/p' | head -1)"
+    [ -n "$lib" ] || break
+    target="$kepler/lib/$lib"
+    [ -e "$target" ] && break
     found="$(find /nix/store -maxdepth 4 -path "*/lib/$lib" -print -quit 2>/dev/null)"
-    if [ -n "$found" ]; then
-      dirs+=("$(dirname "$found")")
-    else
+    if [ -z "$found" ]; then
       _ecos_env_log "警告: 未找到 kepler-formal 需要的 $lib（可 nix-shell -p libxcrypt 提供）"
+      break
+    fi
+    if ln -sfn "$found" "$target" 2>/dev/null; then
+      _ecos_env_log "kepler-formal 链接库已补齐: $lib -> $found"
+    else
+      _ecos_env_log "警告: 无法写入 $target（bundle 目录只读？）"
+      break
     fi
   done
-  [ "${#dirs[@]}" -gt 0 ] || return 0
 
-  local joined=""
-  printf -v joined '%s:' "${dirs[@]}"
-  joined="${joined%:}"
-  if LD_LIBRARY_PATH="$joined${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" \
+  if _ecos_env_launch_env -u LD_LIBRARY_PATH -u LD_PRELOAD \
     "$kepler/kepler-formal" --version >/dev/null 2>&1; then
-    for lib in "${dirs[@]}"; do _ecos_env_prepend LD_LIBRARY_PATH "$lib"; done
-    _ecos_env_log "kepler-formal 链接库已补齐: $joined"
-  else
-    _ecos_env_log "警告: kepler-formal 仍无法运行；在 nix develop 里时 NIX_LD(glibc) 版本可能过旧，改用普通终端重试"
+    return 0
   fi
+  _ecos_env_log "警告: kepler-formal 仍无法运行（若在 nix shell 里，需 unset NIX_LD NIX_LD_LIBRARY_PATH）"
 }
 
 _ecos_env_resolve_ecc() {
@@ -115,6 +131,37 @@ _ecos_env_resolve_ecc() {
     fi
   done
   return 1
+}
+
+# ECOS Studio 的 AppImage 只带了 chip-viewer-native 和 Sizer，没有 ECC。
+# chip-viewer 先检查 resources/binaries/{ecc,_internal/ecc_tools_bin}，缺失后
+# 才回退到 PATH；但 AppImage 内的 PATH 里也不会有 chip-viewer-native。这里把
+# bundle 的 ECC 链进解包目录，让 layout 视图走 packaged 分支。
+_ecos_env_patch_chip_viewer() {
+  local binaries="$1/resources/binaries"
+  [ -n "${_ecos_ecc_bin:-}" ] || return 0
+  [ -x "$_ecos_ecc_bin/ecc" ] || return 0
+  [ -d "$_ecos_ecc_bin/_internal/ecc_tools_bin" ] || return 0
+  [ -d "$binaries" ] || return 0
+
+  local patched=0
+  if [ ! -e "$binaries/ecc" ]; then
+    if ln -sfn "$_ecos_ecc_bin/ecc" "$binaries/ecc" 2>/dev/null; then
+      patched=1
+    else
+      _ecos_env_log "警告: 无法写入 $binaries/ecc，layout 视图可能打不开"
+    fi
+  fi
+  if [ ! -e "$binaries/_internal" ]; then
+    if ln -sfn "$_ecos_ecc_bin/_internal" "$binaries/_internal" 2>/dev/null; then
+      patched=1
+    else
+      _ecos_env_log "警告: 无法写入 $binaries/_internal，layout 视图可能打不开"
+    fi
+  fi
+  [ "$patched" = 1 ] &&
+    _ecos_env_log "chip viewer: 已用 bundle ECC 补齐 $binaries"
+  return 0
 }
 
 # ---------------------------------------------------------------- 参数解析
@@ -210,7 +257,7 @@ fi
 if [ "$_ECOS_ENV_MODE" = check ]; then
   printf '\n%-8s %s\n' "tool" "status"
   printf '%-8s %s\n' "sizer" "$("$ECOS_BUNDLE_ROOT/ecc-sizer/bin/Sizer" -v 2>&1 | head -1)"
-  printf '%-8s %s\n' "kepler" "$("$ECOS_BUNDLE_ROOT/kepler-formal/kepler-formal" --version 2>&1 | head -1)"
+  printf '%-8s %s\n' "kepler" "$(_ecos_env_launch_env -u LD_LIBRARY_PATH -u LD_PRELOAD "$ECOS_BUNDLE_ROOT/kepler-formal/kepler-formal" --version 2>&1 | head -1)"
   if [ -x "$ECOS_BUNDLE_ROOT/ecc/ecc" ]; then
     printf '%-8s %s\n' "ecc" "$("$ECOS_BUNDLE_ROOT/ecc/ecc" version --json 2>&1 | head -1)"
   fi
@@ -228,12 +275,23 @@ fi
 if [ "$_ECOS_ENV_SOURCED" = 1 ]; then
   [ "${ECOS_ENV_VERBOSE:-0}" = 1 ] ||
     _ecos_env_log "已配置 nightly 工具链（ecc: ${_ecos_ecc_bin:-PATH}, pdk: ${CHIPCOMPILER_ICS55_PDK_ROOT:-未设置}）"
+  # 当前 shell 的 NIX_LD 仍指向 dev shell 的 glibc，手动跑 kepler-formal 会缺 GLIBC_2.43；
+  # 启动 Studio 时脚本已经自动去掉这两个变量，这里只提示。
+  if [ -n "${NIX_LD:-}" ] &&
+    ! "$ECOS_BUNDLE_ROOT/kepler-formal/kepler-formal" --version >/dev/null 2>&1; then
+    _ecos_env_log "提示: 在 dev shell 里手动跑 kepler-formal 需先 unset NIX_LD NIX_LD_LIBRARY_PATH（Studio 启动时已自动处理）"
+  fi
   return 0
 fi
 
 _ecos_appimage="$(find "$ECOS_BUNDLE_ROOT/studio" -maxdepth 1 -name '*.AppImage' -print -quit 2>/dev/null)"
 [ -n "$_ecos_appimage" ] || { _ecos_env_fail "studio/ 下没有 AppImage"; }
 [ -x "$_ecos_appimage" ] || chmod +x "$_ecos_appimage" 2>/dev/null
+
+# 让 GUI 会话及其子进程（kepler-formal 等）使用系统 loader。
+if [ "${ECOS_KEEP_NIX_LD:-0}" != 1 ]; then
+  unset NIX_LD NIX_LD_LIBRARY_PATH
+fi
 
 _ecos_extra=()
 [ -n "${ECOS_STUDIO_NO_SANDBOX:-}" ] && _ecos_extra+=("--no-sandbox")
@@ -244,21 +302,28 @@ fi
 
 # NixOS 上 AppImage 里的 Electron 需要 /bin/bash 和一批系统库，
 # 直接跑会报 AppRun 找不到或 libglib-2.0.so.0 缺失；交给 appimage-run 的 FHS 环境。
+# appimage-run 按 AppImage 的 sha256 缓存在 ~/.cache/appimage-run/<sha>；先解包并补
+# 上 chip viewer 需要的 ECC，再交给 appimage-run 启动（它会复用这个目录）。
 if [ "${ECOS_STUDIO_NATIVE:-0}" != 1 ] && [ -d /nix/store ] && command -v nix >/dev/null 2>&1; then
+  _ecos_appdir="${XDG_CACHE_HOME:-$HOME/.cache}/appimage-run/$(sha256sum "$_ecos_appimage" | awk '{print $1}')"
+  if [ ! -x "$_ecos_appdir/AppRun" ]; then
+    _ecos_env_log "首次启动：解包 AppImage 到 $_ecos_appdir"
+    mkdir -p "$(dirname "$_ecos_appdir")"
+    rm -rf "$_ecos_appdir"
+    nix run nixpkgs#appimage-run -- -x "$_ecos_appdir" "$_ecos_appimage" >/dev/null ||
+      _ecos_env_fail "AppImage 解包失败: $_ecos_appimage"
+  fi
+  _ecos_env_patch_chip_viewer "$_ecos_appdir"
   exec nix run nixpkgs#appimage-run -- "$_ecos_appimage" "${_ecos_extra[@]}" "${_ECOS_ENV_STUDIO_ARGS[@]}"
 fi
 
-# 原生路径 1：直接跑 AppImage（默认自解压，不依赖 FUSE）。
-if [ -x /bin/bash ]; then
-  if [ "${ECOS_STUDIO_NO_EXTRACT:-0}" = 1 ] && [ -e /dev/fuse ]; then
-    exec "$_ecos_appimage" "${_ecos_extra[@]}" "${_ECOS_ENV_STUDIO_ARGS[@]}"
-  fi
-  export APPIMAGE_EXTRACT_AND_RUN=1
+# 原生路径：自己解包到缓存目录，补上 chip viewer 需要的 ECC，再跑 AppRun。
+# FUSE 挂载是只读的，无法补链接；仅在显式设置 ECOS_STUDIO_NO_EXTRACT=1 时使用。
+if [ "${ECOS_STUDIO_NO_EXTRACT:-0}" = 1 ] && [ -e /dev/fuse ] && [ -x /bin/bash ]; then
+  _ecos_env_log "提示: FUSE 模式下无法补齐 chip viewer 的 ECC，layout 视图可能打不开"
   exec "$_ecos_appimage" "${_ecos_extra[@]}" "${_ECOS_ENV_STUDIO_ARGS[@]}"
 fi
 
-# 原生路径 2：没有 /bin/bash 时（AppRun 的 shebang 是 #!/bin/bash），
-# 自解包缓存后用 bash 跑 AppRun。
 _ecos_cache_root="${XDG_CACHE_HOME:-$HOME/.cache}/ecos-studio-nightly"
 _ecos_key="$(basename "$_ecos_appimage")-$(stat -c '%s-%Y' "$_ecos_appimage" 2>/dev/null | tr -d ' ')"
 _ecos_appdir="$_ecos_cache_root/appdir-$_ecos_key"
@@ -273,6 +338,10 @@ if [ ! -x "$_ecos_appdir/AppRun" ]; then
   mv "$_ecos_cache_root/.tmp-extract/squashfs-root" "$_ecos_appdir" ||
     _ecos_env_fail "AppImage 解包结果不完整: $_ecos_cache_root/.tmp-extract"
 fi
+_ecos_env_patch_chip_viewer "$_ecos_appdir"
 # AppRun 在没有 APPDIR 时会用 $1 猜目录，带参数启动会猜错，所以显式指定。
 export APPDIR="$_ecos_appdir"
+if [ -x /bin/bash ]; then
+  exec "$_ecos_appdir/AppRun" "${_ecos_extra[@]}" "${_ECOS_ENV_STUDIO_ARGS[@]}"
+fi
 exec bash "$_ecos_appdir/AppRun" "${_ecos_extra[@]}" "${_ECOS_ENV_STUDIO_ARGS[@]}"
